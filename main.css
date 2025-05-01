@@ -27,8 +27,7 @@
 	--menu-button-margin-block: 0.3125rem;
 	--menu-button-line-height: 1.25rem;
 	--menu-button-padding: 0.625rem;
-}
-:root {
+	--menubar-holder-height: calc(var(--menu-button-padding) * 2 + var(--menu-button-line-height) + var(--menu-button-margin-block) * 2)
 }
 body
 {
@@ -115,8 +114,9 @@ body
 	width: 100%;
 	width: 100dvw;
 	height: 50px;
-	height: calc(var(--menu-button-padding) * 2 + var(--menu-button-line-height) + var(--menu-button-margin-block) * 2);
+	height: var(--menubar-holder-height);
 	border-style: hidden;
 	border-width: 0px;
 	min-width: min-content;
+	display: block;
 }

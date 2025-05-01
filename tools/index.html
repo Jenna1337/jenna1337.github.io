@@ -20,29 +20,38 @@ table, tr, td{
 td{
 	padding: 1ex;
 }
+#targetcontainer {
+	--border-width: 2px;
+	border: var(--border-width) solid CurrentColor;
+	border-width: var(--border-width);
+	flex-grow: 1;
+	box-sizing: border-box;
+	height: calc(100dvh - var(--menubar-holder-height));
+}
 </style>
 </head>
-<body style="margin-top: 0px; margin-left: 0px; margin-right: 0px; margin-bottom: 0px;">
+<body style="margin: 0px; padding: 0px; border: none; border-width: 0;">
 <iframe class="MenuBarHolder" src="../MenuBar.html"></iframe>
-<table>
+<div style="display:flex">
+<div style="flex-grow: 0;flex-shrink: 0;"><table>
 <tbody>
-<tr><td><a target="_blank" href="CSS_Orbit.html">CSS_Orbit</a></td></tr>
-<tr><td><a target="_blank" href="FezFontComparer.html">FezFontComparer</a></td></tr>
-<tr><td><a target="_blank" href="FezFontComparer2.html">FezFontComparer2</a></td></tr>
-<tr><td><a target="_blank" href="FezSaveFileEditor.html">FezSaveFileEditor</a></td></tr>
-<tr><td><a target="_blank" href="FileToBase64DataURLConverter.html">FileToBase64DataURLConverter</a></td></tr>
-<tr><td><a target="_blank" href="ImageBlend.html">ImageBlend</a></td></tr>
-<tr><td><a target="_blank" href="ImageToColorArray.html">ImageToColorArray</a></td></tr>
-<tr><td><a target="_blank" href="JsonGrouper.html">JsonGrouper</a></td></tr>
-<tr><td><a target="_blank" href="MicroAsm.html">MicroAsm</a></td></tr>
-<tr><td><a target="_blank" href="NetworkVisualizer.html">NetworkVisualizer</a></td></tr>
-<tr><td><a target="_blank" href="PixelArtToSVG.html">PixelArtToSVG</a></td></tr>
-<tr><td><a target="_blank" href="RGB_Cube.html">RGB_Cube</a></td></tr>
-<tr><td><a target="_blank" href="TimeZoneDataParser.html">TimeZoneDataParser</a></td></tr>
-<tr><td><a target="_blank" href="World_Clock.html">World_Clock</a></td></tr>
-<tr><td><a target="_blank" href="baseconvert2_gui.html">baseconvert2_gui</a></td></tr>
+<tr><td><a target="targetcontainer" href="CSS_Orbit.html">CSS_Orbit</a></td></tr>
+<tr><td><a target="targetcontainer" href="FezFontComparer.html">FezFontComparer</a></td></tr>
+<tr><td><a target="targetcontainer" href="FezFontComparer2.html">FezFontComparer2</a></td></tr>
+<tr><td><a target="targetcontainer" href="FezSaveFileEditor.html">FezSaveFileEditor</a></td></tr>
+<tr><td><a target="targetcontainer" href="FileToBase64DataURLConverter.html">FileToBase64DataURLConverter</a></td></tr>
+<tr><td><a target="targetcontainer" href="ImageBlend.html">ImageBlend</a></td></tr>
+<tr><td><a target="targetcontainer" href="ImageToColorArray.html">ImageToColorArray</a></td></tr>
+<tr><td><a target="targetcontainer" href="JsonGrouper.html">JsonGrouper</a></td></tr>
+<tr><td><a target="targetcontainer" href="MicroAsm.html">MicroAsm</a></td></tr>
+<tr><td><a target="targetcontainer" href="NetworkVisualizer.html">NetworkVisualizer</a></td></tr>
+<tr><td><a target="targetcontainer" href="PixelArtToSVG.html">PixelArtToSVG</a></td></tr>
+<tr><td><a target="targetcontainer" href="RGB_Cube.html">RGB_Cube</a></td></tr>
+<tr><td><a target="targetcontainer" href="TimeZoneDataParser.html">TimeZoneDataParser</a></td></tr>
+<tr><td><a target="targetcontainer" href="World_Clock.html">World_Clock</a></td></tr>
 </tbody>
-</table>
-<iframe name="targetcontainer" style="display:none"></iframe>
+</table></div>
+<iframe id="targetcontainer" name="targetcontainer" loading="lazy"></iframe>
+</div>
 </body>
 </html>
