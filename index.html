@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Jenna1337</title>
+<style>
+body {
+	font-family: sans-serif;
+}
+* {
+	font-family: inherit;
+}
+#searchButton * {
+	width: max-content;
+	/*
+	padding: 2px 7px;
+	border: 2px outset ButtonBorder;
+	border: 1px solid gray;
+	background-color: ButtonFace;
+	color: ButtonText;
+	border-radius: 4px;
+	text-align: center;
+	user-select: none;
+	box-sizing: border-box;
+	*/
+}
+</style>
+<script type="text/javascript">
+function updateSearch()
+{
+	var searchEngineUrl = document.getElementById("SearchEngine").value;
+	var searchBox = document.getElementById("searchBox");
+	var searchFullUrl = searchEngineUrl + searchBox.value;
+	document.getElementById("searchButton").href = searchFullUrl;
+	searchBox.name = searchEngineUrl.split("?")[1].split("&").at(-1).split("=")[0];
+	document.getElementById("searchForm").action = searchFullUrl;
+}
+function FullyLoaded()
+{
+	document.getElementById("searchForm").style.visibility="visible";
+	updateSearch();
+}
+</script>
+</head>
+<body>
+<h1>Hello World</h1>
+<p>I'm hosted with GitHub Pages.</p>
+<form id="searchForm" method="get" action="https://www.google.com/search?q=" style="visibility: visible;">
+  <table style="width: 468px; border: none;">
+    <tbody><tr>
+      <td>
+      <select id="SearchEngine" onchange="updateSearch()">
+        <option value="https://www.google.com/search?q=">Google</option>
+        <option value="https://www.bing.com/search?q=">Bing</option>
+        <option value="https://duckduckgo.com/?q=">DuckDuckGo</option>
+        <option value="https://www.ecosia.org/search?q=">Ecosia</option>
+        <option value="https://search.givewater.com/serp?q=">giveWater</option>
+        <option value="https://ekoru.org/?q=">Ekoru</option>
+        <option value="https://www.wolframalpha.com/input/?i=">Wolfram|Alpha</option>
+      </select></td>
+      <td><input id="searchBox" type="text" name="q" value="" placeholder="Search the Internet" style="width:300px;" onchange="updateSearch()"></td>
+      <td id="searchButton">
+        <button type="submit">Search 🔍</button>
+      </td>
+    </tr>
+  </tbody></table>
+</form>
+</body>
+</html>
