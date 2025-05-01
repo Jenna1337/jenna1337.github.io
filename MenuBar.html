@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <title>Menu Bar</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="stylesheet" type="text/css" href="/main.css" />
 <link rel="stylesheet" type="text/css" href="main.css" />
 <script>
@@ -24,6 +25,11 @@ window.addEventListener("load", function(){
 </head>
 <body style="margin-top: 0px; margin-left: 0px; margin-right: 0px; margin-bottom: 0px;">
 <div class="MenuBar" ondragstart="return false;">
+<!--
+ Note: the reason why the MenuButton is two separate elements
+ is solely so we can make the text larger
+ without affecting the size of the element.
+-->
 <div class="MenuButton">
 <a target="_parent" href="/index.html">
 Home</a></div>
@@ -33,9 +39,6 @@ Games</a></div>
 <div class="MenuButton">
 <a target="_parent" href="/tools/index.html">
 Tools</a></div>
-<div class="MenuButton">
-<a target="_parent" href="/mymods/listfolders.php">
-Jenna's Mods</a></div>
 </div>
 </body>
 </html>
