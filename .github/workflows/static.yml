@@ -32,7 +32,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Removing symlinks
-        run: rm -f HTML5-Games
+        run: rm -f HTML5-Games.cmd
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact
