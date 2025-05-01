@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Menu Bar</title>
+<link rel="stylesheet" type="text/css" href="/main.css" />
+<link rel="stylesheet" type="text/css" href="main.css" />
+<script>
+window.addEventListener("load", function(){
+	if(location.protocol.startsWith("file")){
+		const basePath = location.pathname.split(/(?<=github\.io)/gi)[0];
+		document.querySelectorAll("[href]").forEach(a=>{
+			let hrefVal = a.getAttribute("href");
+			if(!hrefVal.includes(basePath)){
+				if(!hrefVal.startsWith("/")){
+					hrefVal = "/" + hrefVal;
+				}
+				a.setAttribute("href", basePath + hrefVal);
+			}
+		});
+	}
+});
+</script>
+</head>
+<body style="margin-top: 0px; margin-left: 0px; margin-right: 0px; margin-bottom: 0px;">
+<div class="MenuBar" ondragstart="return false;">
+<div class="MenuButton">
+<a target="_parent" href="/index.html">
+Home</a></div>
+<div class="MenuButton">
+<a target="_parent" href="/games/index.html">
+Games</a></div>
+<div class="MenuButton">
+<a target="_parent" href="/tools/index.html">
+Tools</a></div>
+<div class="MenuButton">
+<a target="_parent" href="/mymods/listfolders.php">
+Jenna's Mods</a></div>
+</div>
+</body>
+</html>

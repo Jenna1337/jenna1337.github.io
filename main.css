@@ -1,0 +1,112 @@
+@charset "utf-8";
+/* CSS Document */
+:root{
+	--color-accent1: #dbbdff;/* lavender */
+	--color-accent2: #ffa9ad;/* salmon */
+	--color-accent3: #e4fec5;/* green */
+	--color-accent4: #98a2ff;/* blue */
+	--color-accent5: #fedfc5;/* orange */
+	
+	--ratio-mix-color-text: 25%;
+	--ratio-mix-color-back: 25%;
+	--ratio-mix-color-white: 75%;
+	--ratio-mix-color-black: 75%;
+	
+	--color-accent1-back: color-mix(in hwb, var(--color-accent1) var(--ratio-mix-color-text), #FFFFFF var(--ratio-mix-color-white));
+	--color-accent2-back: color-mix(in hwb, var(--color-accent2) var(--ratio-mix-color-text), #FFFFFF var(--ratio-mix-color-white));
+	--color-accent3-back: color-mix(in hwb, var(--color-accent3) var(--ratio-mix-color-text), #FFFFFF var(--ratio-mix-color-white));
+	--color-accent4-back: color-mix(in hwb, var(--color-accent4) var(--ratio-mix-color-text), #FFFFFF var(--ratio-mix-color-white));
+	--color-accent5-back: color-mix(in hwb, var(--color-accent5) var(--ratio-mix-color-text), #FFFFFF var(--ratio-mix-color-white));
+	
+	--color-accent1-text: color-mix(in hwb, var(--color-accent1) var(--ratio-mix-color-back), #000000 var(--ratio-mix-color-black));
+	--color-accent2-text: color-mix(in hwb, var(--color-accent2) var(--ratio-mix-color-back), #000000 var(--ratio-mix-color-black));
+	--color-accent3-text: color-mix(in hwb, var(--color-accent3) var(--ratio-mix-color-back), #000000 var(--ratio-mix-color-black));
+	--color-accent4-text: color-mix(in hwb, var(--color-accent4) var(--ratio-mix-color-back), #000000 var(--ratio-mix-color-black));
+	--color-accent5-text: color-mix(in hwb, var(--color-accent5) var(--ratio-mix-color-back), #000000 var(--ratio-mix-color-black));
+}
+body
+{
+	background-color: var(--color-accent1-back);
+	color: var(--color-accent1-text);
+}
+.MenuBar
+{
+	user-select: none;
+	-webkit-user-select: none;
+	-ms-user-select: none;
+	-moz-user-select: none;
+	display: flex;
+	width: 80%;
+	margin-left: auto;
+	margin-right: auto;
+	margin-top: 5px;
+	margin-bottom: 5px;
+	height: auto;
+}
+.MenuButton
+{
+	height: auto;
+	text-align: center;
+	background-color: var(--color-accent1);
+	color:var(--color-accent1-text);
+	font-family:Arial, Helvetica, sans-serif;
+	cursor:pointer;
+	flex-grow: 1;
+	margin-left: 1px;
+	margin-right: 1px;
+	box-shadow: 0px 0px 0px red;
+	line-height: 20px;
+	letter-spacing: 0.25em;
+	z-index: 3;
+}
+.MenuButton, .MenuButton>a
+{
+	transition: all 0.1s linear;
+}
+.MenuButton:first-of-type{
+	border-top-left-radius: 5px;
+	border-bottom-left-radius: 5px;
+
+}
+.MenuButton:last-of-type{
+	border-top-right-radius: 5px;
+	border-bottom-right-radius: 5px;
+
+
+}
+.MenuButton:hover
+{
+	background-color: var(--color-accent4);
+	color:var(--color-accent4-text);
+	box-shadow: 0px 0px 5px var(--color-accent4);
+	z-index: 7;
+	border-radius: 5px;
+}
+.MenuButton:active
+{
+	background-color: var(--color-accent2);
+	color:var(--color-accent2-text);
+	box-shadow: 0px 0px 5px var(--color-accent2);
+}
+.MenuButton>a
+{
+	color:inherit;
+	text-decoration: none;
+	font-weight:bold;
+	vertical-align:middle;
+	padding: 10px;
+	letter-spacing: inherit;
+	display: block;
+	transform-origin: center center;
+	transform-box: border-box;
+}
+.MenuButton:hover>a{
+	transform: scale(1.2);
+}
+.MenuBarHolder
+{
+	width: 100%;
+	height: 50px;
+	border-style: hidden;
+	border-width: 0px;
+}
