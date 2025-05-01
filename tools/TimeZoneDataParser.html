@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+<meta charset="UTF-8" />
+<meta name="description" content="Bundles multiple JSON files into a single JSON file" />
+<meta name="keywords" content="JSON group grouper multiple bundle pack" />
+<meta name="author" content="Jenna Sloan" />
+<title>Time Zone Data Parser</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+body {
+	image-rendering: pixelated;
+}
+table, tr, td {
+	border: 1px solid black;
+	border-spacing: 0px;
+	/*border-collapse: collapse;*/
+}
+tr, td {
+	position: relative;
+	max-height: 100px;
+}
+pre, .filenames, .error, td {
+	height: 100px;
+	overflow: auto;
+	margin: 0px;
+	padding: 5px;
+	max-width: 200px;
+	word-wrap: break-word;
+	text-align: left;
+	vertical-align: top;
+	white-space: pre;
+}
+.error {
+	color: red;
+}
+td>pre {
+	width: 50ch;
+	min-height: 10lh;
+	resize: both;
+	max-width: unset !important;
+}
+td:has(>pre){
+	max-width: unset !important;
+	padding: 0;
+}
+</style>
+</head>
+<script id="datetimetools">
+const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const comparefuncs = {
+	"<=": function(a,b){ return a<=b; },
+	">=": function(a,b){ return a>=b; },
+	"<": function(a,b){ return a<b; },
+	">": function(a,b){ return a>b; },
+}
+function getTimeZoneRuleDateStamp(year, monthname, daydesc){
+	//convert stuff like "Sun>=8" and "lastSun" and "Fri>=23" and "Sat<=30" to something usable
+	const month = months.indexOf(monthname);
+	const weekday = weekdays.findIndex(a=>daydesc.includes(a));
+	
+	const findlast = daydesc.startsWith("last");
+	const findfirst = daydesc.startsWith("first");
+	const lastdayofmonth = new Date(year, month+1, 0).getDate();
+	const firstdayofmonth = new Date(year, month, 1).getDate();
+	
+	let compfunc;
+	if (daydesc.includes(">=")) {
+		compfunc = ">=";
+	} else if (daydesc.includes("<=")) {
+		compfunc = "<=";
+	} else if (daydesc.includes(">")) {
+		compfunc = ">";
+	} else if (daydesc.includes("<")) {
+		compfunc = "<";
+	} else {
+		compfunc = findlast ? "<=" : ">=";
+	}
+
+	var daynummatch=daydesc.match(/\d+/);
+	var targetDayNumber;
+	var dayofmonth;
+	if(daynummatch !=null && daynummatch[0] != null){
+		targetDayNumber= Number(daynummatch[0]);
+	}
+	if(compfunc.includes("<") && !targetDayNumber){
+		targetDayNumber ??= lastdayofmonth;
+	}
+	if(compfunc.includes(">") && !targetDayNumber){
+		targetDayNumber ??= firstdayofmonth;
+	}
+	
+	if (findfirst) {
+		dayofmonth = new Date(year, month, 1);
+	} else if (findlast) {
+		dayofmonth = new Date(year, month, lastdayofmonth);
+	} else {
+		// We'll set it to a specific day in the month based on the rules.
+		dayofmonth = new Date(year, month, targetDayNumber);
+	}
+	
+	while(true){
+		if(dayofmonth.getMonth()!=month){
+			throw new Error("Date out of bounds for month: "+monthname+":   "+dayofmonth);
+		}
+		if(comparefuncs[compfunc](dayofmonth.getDate(), targetDayNumber) && dayofmonth.getDay()==weekday){
+			break;
+		}
+		if (compfunc.includes("<")) {
+			dayofmonth.setDate(dayofmonth.getDate() - 1);
+		} else {
+			dayofmonth.setDate(dayofmonth.getDate() + 1);
+		}
+	}
+	return dayofmonth;
+}
+</script>
+<body>
+<noscript>This page requires JavaScript</noscript>
+<!--button onclick="previewtablebody.innerHTML=''">Clear output</button-->
+<input id="inputfiles" type="file" multiple onchange=""><br>
+<button onclick="previewFiles()">Parse Time Zone Database file</button>
+<script>
+
+const zoneRegex = /^Zone\s(?<Name>\S+)(?:(?!^Zone).)*?(?:^\s{3,}|\s*)(?<offset>[+-]?\d+(?::\d+(?::\d+)?)?)\s(?<rules>[^\s]+)\t(?<format>[^\s]+)[\t ]*(?:$(?=\n\n|\n\w)|\s*#|\s*(?!.))/gms;
+const ruleRegex = /^Rule\s(?<name>\S+)\s\S+\smax\s-\s(?<month>[^\t]+)\s(?<day>[^\t]+)\s(?<attime>[^\t]+)\s(?<timesave>[^\t]+)\s(?<letter>[^\s]+)/gms
+
+var previewtablebody = document.createElement('tbody');
+var previewtable = document.createElement('table');
+previewtable.appendChild(previewtablebody);
+document.body.appendChild(previewtable);
+
+function previewFiles() {
+	var files = document.getElementById("inputfiles").files;
+	
+	var row = document.createElement('tr');
+	var fname = document.createElement('td');
+	fname.classList.add("filenames");
+	row.appendChild(fname);
+	var fdat = document.createElement('td');
+	var fdatpre = document.createElement('pre');
+	fdat.appendChild(fdatpre);
+	row.appendChild(fdat);
+	
+	var loadedcount = 0;
+	var jdat = {"zones":[],"rules":{}};
+	window.z=jdat
+	var i=0;
+	
+	(function next(){//Note: this must be like this instead of a normal for loop because otherwise janky stuff can sometimes occur
+		file = files[i++];
+		console.log(file);
+		if (file){
+			if(i>1) {
+				fname.textContent += "\n";
+			}
+			var fnameNoExt = file.name;
+			fname.textContent += fnameNoExt;
+			
+			var reader = new FileReader();
+			reader.onload = (function(event){
+				jdat.zones.push(...event.target.result.matchAll(zoneRegex).map(m=>m.groups).toArray());
+				event.target.result.matchAll(ruleRegex).map(m=>m.groups).forEach(m=>{
+					if(!jdat.rules[m.name]){
+						jdat.rules[m.name] = [];
+					}
+					jdat.rules[m.name].push(m);
+				});
+				
+				++loadedcount;
+				if(loadedcount >= files.length) {
+					var boxwrap = document.createElement('td');
+					try{
+						fdatpre.textContent = JSON.stringify(jdat, null, 2);
+						let blob = new Blob([JSON.stringify(jdat)], {
+							type: "application/json",
+						});
+						let objurl = URL.createObjectURL(blob);
+						let dlbutton = document.createElement("a");
+						//<a href="path_to_file" download="proposed_file_name">Download</a>
+						dlbutton.setAttribute("download", "consolidated");
+						dlbutton.setAttribute("href", objurl);
+						dlbutton.textContent = "Download ("+blob.size+" bytes)";
+						boxwrap.appendChild(dlbutton);
+					}catch(e){
+						boxwrap.classList.add("error");
+						boxwrap.textContent = e;
+					}finally{
+						row.appendChild(boxwrap);
+						
+						function addJsonFunctions(jdat){
+							jdat.zones.forEach(m=>{
+								m.getChangeDates = function(...years){
+									return years.flatMap(year=>jdat.rules[m.rules].map((r,i,a)=>r.getChangeDate(year, m, a.at(i-1))));
+								}//end of getChangeDates
+								m.getCurrentTimeZoneInfo = function(datetime = new Date()){
+									//TODO return the letter and format and timesave and adjusted offset for the current time for this timezone
+									//also return the formatted m.format with the letter and whatever else it needs
+									const year = datetime.getFullYear();
+									const currentoffset = [
+										...m.getChangeDates(year-1),
+										...m.getChangeDates(year),
+										...m.getChangeDates(year+1)
+									].reduce((lastDate, currentDate)=>{
+										//find most recent starttimestamp to find the current rule
+										return (currentDate.starttimestamp > lastDate.starttimestamp && currentDate.starttimestamp <= datetime) ? currentDate : lastDate;
+									});
+									currentoffset.format = m.format.replace("%s", currentoffset.letter).replace("%z", currentoffset.letter)
+									return currentoffset;
+								}//end of getCurrentTimeZoneInfo
+								//return m;
+							});//end of jdat.zones functions
+							Object.values(jdat.rules).flat().forEach(m=>{
+								m.getChangeDate = function(year, tz, otherrule){
+									var q = getTimeZoneRuleDateStamp(year, m.month, m.day);
+									function getTimeTotalMinutes(offset)
+									{
+										if(!offset.startsWith("+") && !offset.startsWith("-")){
+											offset = "+"+offset;
+										}
+										const offsetSign = offset[0]; // Get the sign (+ or -)
+										var [offsetHours, offsetMinutes] = offset.slice(1).split(':').map(a=>Number(a.match(/\d+/))); // Extract offset hours and minutes
+										offsetMinutes ??= 0;
+										return (offsetSign === '+' ? 1 : -1) * (offsetHours * 60 + offsetMinutes); // Calculate total offset in minutes
+
+									}
+									const totalOffsetMinutes = getTimeTotalMinutes(tz.offset);
+									//const totalTimesaveMinutes = getTimeTotalMinutes(m.timesave);
+									const totalOtherRuleTimesaveMinutes = getTimeTotalMinutes(otherrule.timesave);
+									
+									const totalAttimeMinutes = getTimeTotalMinutes(m.attime);
+									//TODO some attime values have 's' or 'u' at the end, and idk what that means
+									const totalMinutesOffsetFromUTC = totalOffsetMinutes + totalOtherRuleTimesaveMinutes;
+									const totalAttimeMinutesFromUTC = totalAttimeMinutes - totalMinutesOffsetFromUTC;
+									
+									//console.log(m.attime, totalOffsetMinutes, totalOtherRuleTimesaveMinutes, totalAttimeMinutes);
+									
+									const dtstamp = new Date(Date.UTC(
+												year,
+												q.getMonth(),
+												q.getDate(),
+												0,
+												totalAttimeMinutesFromUTC,
+											));
+									
+									return {
+										"starttimestamp": dtstamp,
+										"letter": m.letter,
+										"timesave": m.timesave,
+										"timesave2": otherrule.timesave,
+										"totalMinutesOffsetFromUTC": totalMinutesOffsetFromUTC
+										};
+								}//end of getChangeDate
+							});//end of jdat.rules functions
+						}//end of addJsonFunctions
+						addJsonFunctions(jdat);
+					}//end of finally
+				}//end of if(loadedcount >= files.length)
+				next();
+			});
+			reader.readAsText(file);
+			console.log(file.name);
+		}
+	})();
+	previewtablebody.appendChild(row);
+}
+</script>
+</body>
+</html>

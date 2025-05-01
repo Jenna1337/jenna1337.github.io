@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RGB Cube</title>
+<style>
+:root {
+	--cube-size: 200px;
+	--cube-size: min(30vh, 30vw);
+	--cube-size: min(30svh, 30svw);
+	--cubecontainer-size: 200px;
+	--cube-face-offset: calc(var(--cube-size) / 2);
+	--color-k: #000;
+	--color-r: #F00;
+	--color-g: #0F0;
+	--color-y: #FF0;
+	--color-b: #00F;
+	--color-m: #F0F;
+	--color-c: #0FF;
+	--color-w: #FFF;
+	--color-space: srgb;
+}
+body {
+	background-color: #333;
+	overflow: hidden;
+}
+
+.cubecontainer {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	margin: auto;
+	position: relative;
+	width: 100vw;
+	height: 100vh;
+	width: 100svw;
+	height: 100svh;
+	transform-style: preserve-3d;
+	perspective: 600px;
+}
+.cube {
+	position: relative;
+	width: var(--cube-size);
+	height: var(--cube-size);
+	transform-style: preserve-3d;
+	will-change: transform;
+	/*animation: rotate 10s infinite linear;*/
+}
+
+.face {
+	position: absolute;
+	width: var(--cube-size);
+	height: var(--cube-size);
+	border: 1px solid #fff;
+}
+
+.cube {
+	.face.front  {
+		transform: translateZ(var(--cube-face-offset));
+		--c1: var(--color-r);
+		--c2: var(--color-y);
+		--c3: var(--color-m);
+		--c4: var(--color-w);
+	}
+	.face.back   {
+		transform: rotateY(180deg) translateZ(var(--cube-face-offset));
+		--c1: var(--color-g);/**/
+		--c2: var(--color-k);
+		--c3: var(--color-c);
+		--c4: var(--color-b);/**/
+	}
+	.face.left   {
+		transform: rotateY(-90deg) translateZ(var(--cube-face-offset));
+		--c1: var(--color-k);
+		--c2: var(--color-r);
+		--c3: var(--color-b);/**/
+		--c4: var(--color-m);
+	}
+	.face.right  {
+		transform: rotateY(90deg) translateZ(var(--cube-face-offset));
+		--c1: var(--color-y);
+		--c2: var(--color-g);/**/
+		--c3: var(--color-w);
+		--c4: var(--color-c);
+	}
+	.face.top    {
+		transform: rotateX(90deg) translateZ(var(--cube-face-offset));
+		--c1: var(--color-k);
+		--c2: var(--color-g);/**/
+		--c3: var(--color-r);
+		--c4: var(--color-y);
+	}
+	.face.bottom {
+		transform: rotateX(-90deg) translateZ(var(--cube-face-offset));
+		--c1: var(--color-m);
+		--c2: var(--color-w);
+		--c3: var(--color-b);/**/
+		--c4: var(--color-c);
+	}
+}
+
+.cube.alt {
+	.face.front  {
+		transform: translateZ(var(--cube-face-offset));
+		--c1: var(--color-r);
+		--c2: var(--color-m);/**/
+		--c3: var(--color-y);/**/
+		--c4: var(--color-w);
+	}
+	.face.back   {
+		transform: rotateY(180deg) translateZ(var(--cube-face-offset));
+		--c1: var(--color-b);
+		--c2: var(--color-k);
+		--c3: var(--color-c);
+		--c4: var(--color-g);
+	}
+	.face.left   {
+		transform: rotateY(-90deg) translateZ(var(--cube-face-offset));
+		--c1: var(--color-k);
+		--c2: var(--color-r);
+		--c3: var(--color-g);
+		--c4: var(--color-y);/**/
+	}
+	.face.right  {
+		transform: rotateY(90deg) translateZ(var(--cube-face-offset));
+		--c1: var(--color-m);/**/
+		--c2: var(--color-b);
+		--c3: var(--color-w);
+		--c4: var(--color-c);
+	}
+	.face.top    {
+		transform: rotateX(90deg) translateZ(var(--cube-face-offset));
+		--c1: var(--color-k);
+		--c2: var(--color-b);
+		--c3: var(--color-r);
+		--c4: var(--color-m);/**/
+	}
+	.face.bottom {
+		transform: rotateX(-90deg) translateZ(var(--cube-face-offset));
+		--c1: var(--color-y);/**/
+		--c2: var(--color-w);
+		--c3: var(--color-g);
+		--c4: var(--color-c);
+	}
+}
+
+@keyframes rotate {
+	from {
+		transform: rotateX(0deg) rotateY(0deg);
+	}
+	to {
+		transform: rotateX(360deg) rotateY(360deg);
+	}
+}
+
+.face {
+	background: linear-gradient(in var(--color-space) to right, var(--c1), var(--c2))
+}
+.face::before {
+	content: "";
+	display: block;
+	height: 100%;
+	background: linear-gradient(in var(--color-space) to right, var(--c3), var(--c4));
+	-webkit-mask: linear-gradient(in srgb to bottom,#0000, #000F);
+			mask: linear-gradient(in srgb to bottom,#0000, #000F);
+}
+.cubecontainer {
+	filter: invert(0%);/* fixes disappearing cube*/
+	z-index: 1;
+}
+.invert {
+	filter: invert(100%);
+}
+.transparent .face, .face.transparent{
+	opacity: 0.5;
+}
+#controls {
+	position: absolute;
+	z-index: 9;
+}
+</style>
+<script>
+const Viewer3D = function(mapcontainer){
+	const FULL_CIRCLE_RADS = Math.PI*2;
+	const degToRad = Math.PI / 180.0;
+	function yawPitchToRotVec(yaw, pitch, rads=false, anglefix=false){
+		var radians_yaw;
+		var radians_pitch;
+		if(rads){
+			radians_yaw = yaw;
+			radians_pitch = pitch;
+		}else{
+			radians_yaw = yaw * degToRad;
+			radians_pitch = pitch * degToRad;
+		}
+		if(anglefix){//idk if fixing the angles to be between 0 and a full circle actually does anything beneficial
+			while(radians_yaw < 0){
+				radians_yaw += FULL_CIRCLE_RADS;
+			}
+			while(radians_pitch < 0){
+				radians_pitch += FULL_CIRCLE_RADS;
+			}
+			radians_yaw %= FULL_CIRCLE_RADS;
+			radians_pitch %= FULL_CIRCLE_RADS;
+		}
+	//Calculate the cosine and sine values of half the yaw and pitch angles:
+		const cos_yaw = Math.cos(radians_yaw / 2);
+		const sin_yaw = Math.sin(radians_yaw / 2);
+		const cos_pitch = Math.cos(radians_pitch / 2);
+		const sin_pitch = Math.sin(radians_pitch / 2);
+	//Compute the x, y, and z components of the axis vector:
+		const x_axis = cos_yaw * sin_pitch;
+		const z_axis = sin_yaw * sin_pitch;
+		const y_axis = sin_yaw * cos_pitch;
+	//Compute the angle of rotation:
+		const angle = 2 * Math.acos(cos_yaw * cos_pitch) * (180 / Math.PI);
+		// Normalize the axis vector
+		const magnitude = Math.sqrt(x_axis ** 2 + y_axis ** 2 + z_axis ** 2);
+		const normalized_x_axis = x_axis / magnitude;
+		const normalized_y_axis = y_axis / magnitude;
+		const normalized_z_axis = z_axis / magnitude;
+		
+		return "rotate3d(" + normalized_x_axis + ", " + normalized_y_axis + ", " + normalized_z_axis + ", " + angle + "deg)";
+	}
+	
+	const zoomMin = 0.01;
+	const zoomMax = 100;
+	
+	var zoom = 1;
+	var yaw = 45;
+	var pitch = -45;
+	
+	const invertX = false;
+	const invertY = true;
+	const sensitivityX = 0.5;
+	const sensitivityY = 0.5;
+	const zoomSensitivity = 1.2;
+	
+	const cube = mapcontainer.children[0];
+	
+	function UpdateView(){
+		cube.style.transform = `scale(${zoom}) ${yawPitchToRotVec(yaw,pitch)}`;
+	}
+	
+	//TODO add convenient zoom slider
+	
+	//events
+	{
+		let mousepos = {"X":0,"Y":0};
+		mapcontainer.addEventListener("pointerdown",function(event){
+			mousepos.X = event.pageX;
+			mousepos.Y = event.pageY;
+		});
+		mapcontainer.addEventListener("pointermove",function(event){
+			if(event.buttons != 0){
+				var dx = event.pageX - mousepos.X;
+				var dy = event.pageY - mousepos.Y;
+				mousepos.X = event.pageX;
+				mousepos.Y = event.pageY;
+				event.preventDefault();//disables touch scrolling
+				var b = event.buttons;
+				yaw += dx * (invertX ? -1 : 1) * sensitivityX;
+				pitch += dy * (invertY ? -1 : 1) * sensitivityY;
+				//yaw %= 360;
+				pitch = pitch;
+				UpdateView();
+			}
+		});
+		mapcontainer.addEventListener("contextmenu",function(event){
+			event.preventDefault();
+			event.stopPropagation();
+			return false;
+		});
+		mapcontainer.addEventListener("wheel", function(event){
+			if(event.deltaY>0){
+				zoom /= zoomSensitivity;
+			}
+			if(event.deltaY<0){
+				zoom *= zoomSensitivity;
+			}
+			zoom = Math.max(Math.min(zoom, zoomMax), zoomMin);
+			UpdateView();
+		})
+		
+		//TODO add keyboard controls
+	}
+	UpdateView();
+};
+document.addEventListener("DOMContentLoaded", ()=>{
+	[...document.getElementsByClassName("cubecontainer")].forEach(c=>Viewer3D(c));
+});
+function altCube(){
+	[...document.getElementsByClassName("cube")].forEach(c=>c.classList.toggle("alt"));
+};
+function invert(){
+	[...document.getElementsByClassName("cubecontainer")].forEach(c=>c.classList.toggle("invert"));
+};
+function trans(){
+	[...document.getElementsByClassName("cube")].forEach(c=>c.classList.toggle("transparent"));
+};
+function changeColorSpace(evt){
+	[...document.getElementsByClassName("cubecontainer")].forEach(c=>c.style.setProperty("--color-space", evt.value));
+};
+</script>
+</head>
+<body>
+<div id="controls">
+<label for="color-space" style="background-color: ButtonFace; color: ButtonText;">Color space: </label><!--
+From https://drafts.csswg.org/css-color/#interpolation-space
+replace (.+?)(?: \| |\z)
+with <option value="$1">$1</option>\n
+--><select id="color-space" onchange="changeColorSpace(this)" autocomplete="off">
+<option value="srgb" selected="">srgb</option>
+<option value="srgb-linear">srgb-linear</option>
+<option value="display-p3">display-p3</option>
+<option value="a98-rgb">a98-rgb</option>
+<option value="prophoto-rgb">prophoto-rgb</option>
+<option value="rec2020">rec2020</option>
+<option value="lab">lab</option>
+<option value="oklab">oklab</option>
+<option value="xyz">xyz</option>
+<option value="xyz-d50">xyz-d50</option>
+<option value="xyz-d65">xyz-d65</option>
+<option value="hsl">hsl</option>
+<option value="hwb">hwb</option>
+<option value="lch">lch</option>
+<option value="oklch">oklch</option>
+</select>
+<button onclick="altCube()">invert cube</button>
+<button onclick="invert()">invert filter</button>
+<button onclick="trans()">transparent faces</button>
+</div>
+<div class="cubecontainer">
+<div class="cube">
+<div class="face front"></div>
+<div class="face back"></div>
+<div class="face left"></div>
+<div class="face right"></div>
+<div class="face top"></div>
+<div class="face bottom"></div>
+</div>
+</div>
+</body>
+</html>

@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+<meta charset="UTF-8" />
+<meta name="description" content="Blends colors and alpha of multiple images" />
+<meta name="keywords" content="image,blend,colors,alpha,multiple,images" />
+<meta name="author" content="Jenna Sloan" />
+<title>Image Blend</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+body {
+	image-rendering: pixelated;
+}
+table, tr, td {
+	border: 1px solid black;
+	border-spacing: 0px;
+	/*border-collapse: collapse;*/
+}
+tr, td {
+	position: relative;
+	max-height: 100px;
+}
+pre, .filenames, .error {
+	height: 100px;
+	overflow: auto;
+	margin: 0px;
+	padding: 5px;
+	max-width: 200px;
+	word-wrap: break-word;
+	text-align: left;
+	vertical-align: top;
+}
+.fuploadpreview
+{
+	max-width: 100px;
+	max-height: 100px;
+}
+.rawdatacontainer {
+	max-width: 1000px;
+	display: none;
+}
+.rawdata {
+	height: unset;
+	max-width:unset;
+}
+.cellpreview {
+	width: 100px;
+	background-color: white;
+	vertical-align: top;
+}
+.error {
+	color: red;
+}
+</style>
+<script>
+
+</script>
+</head>
+<body>
+<noscript>This page requires JavaScript</noscript>
+<button onclick="previewtablebody.innerHTML=''">Clear output</button>
+<input id="inputfiles" type="file" multiple onchange="previewFiles()"><br>
+<button onclick="previewFiles()">reload</button>
+<script>
+var previewtablebody = document.createElement('tbody');
+var previewtable = document.createElement('table');
+previewtable.appendChild(previewtablebody);
+document.body.appendChild(previewtable);
+function clearTable(){
+}
+function makeimgele(datauri){console.log(arguments);
+	var imgele = document.createElement("img");
+	imgele.src = datauri;
+	return imgele;
+}
+function getColorData(imgele){
+	var canvas = document.createElement('canvas');
+	document.body.appendChild(canvas);
+	canvas.width = imgele.naturalWidth;
+	canvas.height = imgele.naturalHeight;
+	canvas.getContext('2d').drawImage(imgele, 0, 0, imgele.naturalWidth, imgele.naturalHeight);
+	var pixelData = canvas.getContext('2d').getImageData(0, 0, imgele.naturalWidth, imgele.naturalHeight).data;/*.reduce(function(result, value, index, array) {
+		if (index % 4 === 0) {
+			result.push(array.slice(index, index + 4));
+		}
+		return result;
+		}, []);/* */
+	console.log(imgele.name, pixelData);
+	document.body.removeChild(canvas);
+	return pixelData;
+}
+function blend(imgdataarr) {
+	var w = imgdataarr.map(a=>a.width);
+	var h = imgdataarr.map(a=>a.height);
+	if(!w.every((e,i,a)=>e==a[0]) || !h.every((e,i,a)=>e==a[0])) {
+		throw new Error("images not the same dimensions.");
+	}
+	var canvas = document.createElement('canvas');
+	document.body.appendChild(canvas);
+	canvas.width = w[0];
+	canvas.height = h[0];
+	var ctx = canvas.getContext('2d');
+	var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+	var data = imageData.data;
+	var pdatarrs = imgdataarr.map(a=>a.data);
+	for(var i in data) {
+		//average each pixel in imgdataarr and write pixel data to image data
+		var pdat = pdatarrs.map(a=>a[i]);
+		var pdatavg = pdat.reduce((a, b) => a + b) / pdat.length;
+		data[i] = pdatavg;
+	}
+	ctx.putImageData(imageData, 0, 0);
+	return canvas;
+}
+function previewFiles() {
+	var files = document.getElementById("inputfiles").files;
+	
+	var row = document.createElement('tr');
+	var fname = document.createElement('td');
+	fname.classList.add("filenames");
+	var cell_txt_wrapper = document.createElement('td');
+	cell_txt_wrapper.classList.add("rawdatacontainer");
+	var cell_preview = document.createElement('td');
+	cell_preview.classList.add("cellpreview");
+	row.appendChild(fname);
+	row.appendChild(cell_preview);
+	row.appendChild(cell_txt_wrapper);
+	
+	var loadedimagecount = 0;
+	var pixeldataarr = [];
+	
+	var i=0;
+	(function next(){//Note: this must be like this instead of a normal for loop because otherwise janky stuff can sometimes occur
+		file = files[i++];console.log(files[i])
+		console.log(file);
+		if (file){
+			var url = URL.createObjectURL(file);
+			if(i>1) {
+				fname.textContent += "\n";
+			}
+			fname.textContent += file.name;
+			var imgele = makeimgele(url);
+			imgele.name = file.name;
+			imgele.onload = (function(){
+				//var cell_txt = document.createElement('pre');
+				var pixelData = getColorData(imgele);
+				pixeldataarr.push({"height": imgele.naturalHeight, "width": imgele.naturalWidth, "data": pixelData});
+				//cell_txt.textContent = JSON.stringify(pixelData);
+				//cell_txt.classList.add("rawdata");
+				//cell_txt_wrapper.appendChild(cell_txt);
+				++loadedimagecount;
+				if(loadedimagecount >= files.length) {
+					var imgcanvas_wrapper = document.createElement('td');
+					try{
+						var imgcanvas = blend(pixeldataarr);
+						imgcanvas_wrapper.appendChild(imgcanvas);
+					}catch(e){
+						imgcanvas_wrapper.classList.add("error");
+						imgcanvas_wrapper.textContent = e;
+					}finally{
+						row.appendChild(imgcanvas_wrapper);
+					}
+				}
+				next();
+			});
+			imgele.classList.add("fuploadpreview");
+			cell_preview.appendChild(imgele);
+			console.log(url);
+		}
+	})();
+	previewtablebody.appendChild(row);
+}
+</script>
+</body>
+</html>

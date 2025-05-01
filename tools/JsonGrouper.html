@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+<meta charset="UTF-8" />
+<meta name="description" content="Bundles multiple JSON files into a single JSON file" />
+<meta name="keywords" content="JSON group grouper multiple bundle pack" />
+<meta name="author" content="Jenna Sloan" />
+<title>Json Grouper</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+body {
+	image-rendering: pixelated;
+}
+table, tr, td {
+	border: 1px solid black;
+	border-spacing: 0px;
+	/*border-collapse: collapse;*/
+}
+tr, td {
+	position: relative;
+	max-height: 100px;
+}
+pre, .filenames, .error, td {
+	height: 100px;
+	overflow: auto;
+	margin: 0px;
+	padding: 5px;
+	max-width: 200px;
+	word-wrap: break-word;
+	text-align: left;
+	vertical-align: top;
+	white-space: pre;
+}
+.error {
+	color: red;
+}
+</style>
+<script>
+function updatebool(inputelemid, boollabelid){
+	var inputelem = document.getElementById(inputelemid);
+	var boollabel = document.getElementById(boollabelid);
+	boollabel.textContent = inputelem.checked;
+}
+</script>
+</head>
+<body onload="updatebool('replacespaces','replacespacesbool')">
+<noscript>This page requires JavaScript</noscript>
+<!--button onclick="previewtablebody.innerHTML=''">Clear output</button-->
+<input id="inputfiles" type="file" multiple onchange=""><br>
+<label for="extension">Extension: </label><input id="extension" type="text" onchange="" value=".json"><br>
+<label for="replacespaces">Replace spaces with underscore: </label><input id="replacespaces" type="checkbox" onchange="updatebool('replacespaces','replacespacesbool');" checked=""><label for="replacespaces" id="replacespacesbool">true</label><br />
+<button onclick="previewFiles()">Generate consolidated JSON file</button>
+<script>
+
+var previewtablebody = document.createElement('tbody');
+var previewtable = document.createElement('table');
+previewtable.appendChild(previewtablebody);
+document.body.appendChild(previewtable);
+
+function previewFiles() {
+	var files = document.getElementById("inputfiles").files;
+	var ext = document.getElementById("extension").value;
+	var replacespaces = document.getElementById("replacespaces").checked;
+	
+	var row = document.createElement('tr');
+	var fname = document.createElement('td');
+	fname.classList.add("filenames");
+	row.appendChild(fname);
+	
+	var loadedcount = 0;
+	var jdat = {};
+	
+	var i=0;
+	(function next(){//Note: this must be like this instead of a normal for loop because otherwise janky stuff can sometimes occur
+		file = files[i++];
+		console.log(file);
+		if (file){
+			if(i>1) {
+				fname.textContent += "\n";
+			}
+			var fnameNoExt = file.name;
+			let n = fnameNoExt.lastIndexOf(ext);
+			if (n >= 0 && n + ext.length >= fnameNoExt.length) {
+				fnameNoExt = fnameNoExt.substring(0, n);
+			}
+			if(replacespaces){
+				fnameNoExt = fnameNoExt.replaceAll(" ","_");
+			}
+			fname.textContent += fnameNoExt;
+			
+			var reader = new FileReader();
+			reader.onload = (function(event){
+				jdat[fnameNoExt] = JSON.parse(event.target.result);
+				
+				++loadedcount;
+				if(loadedcount >= files.length) {
+					var boxwrap = document.createElement('td');
+					try{
+						let blob = new Blob([JSON.stringify(jdat)], {
+							type: "application/json",
+						});
+						let objurl = URL.createObjectURL(blob);
+						let dlbutton = document.createElement("a");
+						//<a href="path_to_file" download="proposed_file_name">Download</a>
+						dlbutton.setAttribute("download", "consolidated"+ext);
+						dlbutton.setAttribute("href", objurl);
+						dlbutton.textContent = "Download ("+blob.size+" bytes)";
+						boxwrap.appendChild(dlbutton);
+					}catch(e){
+						boxwrap.classList.add("error");
+						boxwrap.textContent = e;
+					}finally{
+						row.appendChild(boxwrap);
+					}
+				}
+				next();
+			});
+			reader.readAsText(file);
+			console.log(file.name);
+		}
+	})();
+	previewtablebody.appendChild(row);
+}
+</script>
+</body>
+</html>

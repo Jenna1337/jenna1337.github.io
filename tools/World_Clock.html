@@ -1,0 +1,400 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="author" content="Jenna Sloan">
+<title>World Clock</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="color-scheme" content="light dark">
+<style>
+body{
+	margin: 0px;
+	padding: 8px;
+	border-width: 0px;
+	border: none;
+}
+svg {
+	border-width: 0px;
+	border: none;
+	outline: 1px solid currentcolor;
+	background-color: transparent;
+	display: inline-block;
+	max-height: min(256px, calc(100vh - 16px));
+	max-width: min(256px, calc(100vw - 16px));
+	/*min-height: 10vh;
+	min-width: 10vw;*/
+	aspect-ratio: 1 / 1;
+}
+#timezonebox {
+	display: inline-block;
+	vertical-align: top;
+}
+#addtzbox {
+	display: grid;
+	grid-template-columns: repeat(5, auto);
+	grid-template-rows: auto auto;
+	& button {
+		grid-row: span 2;
+	}
+}
+</style>
+<script>
+	function AddNewTimezone()
+	{
+		const newlabel = document.getElementById("tzlabel").value.trim();
+		var newtzoffh = document.getElementById("tzoffh").valueAsNumber*60;
+		if(Number.isNaN(newtzoffh)){
+			newtzoffh = 0;
+		}
+		const sgn = Math.sign(newtzoffh)
+		var newtzoffm = document.getElementById("tzoffm").valueAsNumber;
+		if(Number.isNaN(newtzoffm)){
+			newtzoffm = 0;
+		}
+		const newtzoff = -(newtzoffh + sgn*newtzoffm);
+		
+		const timezonebox = document.getElementById("timezonebox");
+		const newtzelem= document.getElementById("timezonecontainertemplate").content.querySelector(".timezonecontainer").cloneNode(true);
+		newtzelem.querySelector(".datetime").dataset.tz = newtzoff;
+		if(newlabel.length > 0){
+			newtzelem.querySelector(".timezonelabel").textContent = newlabel;
+		}
+		timezonebox.append(newtzelem);
+		
+		addTimezoneOffset(newtzoff);
+	}
+	function RemoveTimezone(elem)
+	{
+		const tzcont =  elem.closest(".timezonecontainer");
+		var tzoff = tzcont.querySelector(".datetime").dataset.tz;
+		tzcont.remove();
+		removeTimezoneOffset(tzoff);
+	}
+</script>
+</head>
+<body>
+<svg viewbox='0 0 256 256' xmlns="http://www.w3.org/2000/svg" role="img" aria-label="analog clock" aria-description="displays the times for time zone box" aria-live="off">
+	<style>
+		/* <![CDATA[ */
+		svg{
+			background-color: transparent;
+			#numbers {
+				text {
+					text-anchor: middle;
+					dominant-baseline: central;
+					font-size: 32px;
+					font-weight: bold;
+					fill: #000;
+				}
+				line {
+					stroke: #000;
+					stroke-linecap: butt;
+					stroke-width: 2px;
+				}
+				line.big {
+					stroke-width: 8px;
+				}
+			}
+			line {
+				
+			}
+			#hands-seconds {
+				line {
+					stroke-width: 2px;
+					@media (prefers-color-scheme: light) {
+						stroke: #F00;
+					}
+					@media (prefers-color-scheme: dark) {
+						stroke: #0FF;
+					}
+					stroke-linecap: butt;
+				}
+			}
+			#hands-minutes {
+				line {
+					stroke-width: 4px;
+					stroke: #000;
+					stroke-linecap: square;
+				}
+			}
+			#hands-hours {
+				line {
+					stroke-width: 6px;
+					stroke: #000;
+					stroke-linecap: round;
+				}
+			}
+			#clockbase, #outline {
+				cx: 128px;
+				cy: 128px;
+				r: 126px;
+			}
+			#clockbase {
+				fill: #FFF;
+				fill-opacity: 1;
+				stroke: none;
+				stroke-width: 0px;
+			}
+			#outline {
+				fill: none;
+				fill-opacity: 0;
+				stroke: #000;
+				stroke-width: 2px;
+			}
+			#point {
+				cx: 128px;
+				cy: 128px;
+				r: 5px;
+			}
+		}
+		@media (prefers-color-scheme: dark) {
+			svg {
+				#numbers {
+					text {
+						fill: #CFC;
+					}
+					line {
+						stroke: #0F0;
+					}
+				}
+				line {
+					
+				}
+				#hands-seconds {
+					line {
+						stroke: #F00;
+					}
+				}
+				#hands-minutes {
+					line {
+						stroke: #0F0;
+					}
+				}
+				#hands-hours {
+					line {
+						stroke: #0F0;
+					}
+				}
+				#clockbase {
+					fill: #000;
+				}
+				#outline {
+					stroke: #FFF;
+				}
+			}
+		}
+		/* ]]> */
+	</style>
+	<g>
+		<circle id="clockbase" />
+		<g id="numbers">
+			
+		</g>
+		<g id="hands-minutes">
+			<line id="local-time-minutes" />
+		</g>
+		<g id="hands-hours">
+			<line id="local-time-hours" />
+		</g>
+		<g id="hands-seconds">
+			<line id="local-time-seconds" />
+		</g>
+		<circle id="point" fill="#BBB" fill-opacity="1" stroke="none" stroke-width="0" stroke-opacity="0" />
+		<circle id="outline" />
+	</g>
+</svg>
+<div id="timezonebox" role="application" aria-label="time zone box" aria-live="off">
+<div id="addtzbox">
+<label for="tzlabel">New Timezone label</label><label for="tzoffh">UTC Offset (hours)</label>:<label for="tzoffm">UTC Offset (minutes)</label><button onclick="AddNewTimezone()">add</button>
+<input id="tzlabel" type="text" placeholder="Unset" /><input id="tzoffh" type="number" step="1" min="-24" max="24" value="0" />:<input id="tzoffm" type="number" min="0" max="59" value="0" />
+</div>
+Timezones:
+<div class="timezonecontainer"><span class="timezonelabel">Your local time</span>: <span id="localtimezone" class="datetime">???</span></div>
+<template id="timezonecontainertemplate">
+<div class="timezonecontainer"><span class="timezonelabel">Unset</span>: <span class="datetime" data-tz="0">???</span><button onclick="RemoveTimezone(this)">remove</button></div>
+</template>
+</div>
+</body>
+<!-- TODO add url fragment support for easy sharing ( location.hash ) -->
+<!-- TODO add customizable colors for hands? -->
+<script>
+	const h = 128;
+	const k = 128;
+	const lr = 97;
+	const lr1 = 126;
+	const lr2a = 112;
+	const lr2b = 120;
+	const sr = 100;
+	const mr = 100;
+	const hr = 60;
+	const hoursOnTheClock = 12;
+	const hands_seconds = document.getElementById('hands-seconds');
+	const hands_minutes = document.getElementById('hands-minutes');
+	const hands_hours = document.getElementById('hands-hours');
+	
+	const numbers = document.getElementById('numbers');
+	const timezonebox = document.getElementById('timezonebox');
+	//make numbers
+	for(let i=1;i<=hoursOnTheClock;++i){
+		const t=document.createElementNS("http://www.w3.org/2000/svg", "text");
+		const theta = (i / hoursOnTheClock) * (2 * Math.PI) - (Math.PI / 2);
+		t.setAttribute("x", h + lr*Math.cos(theta) +"px");
+		t.setAttribute("y", k + lr*Math.sin(theta) +"px");
+		t.textContent = i;
+		numbers.appendChild(t);
+	}
+	//make dashes 
+	for(let i=0;i<60;++i){
+		const t=document.createElementNS("http://www.w3.org/2000/svg", "line");
+		const theta = (i / 60) * (2 * Math.PI) - (Math.PI / 2);
+		let lr2 = lr2b;
+		if(i%(60/hoursOnTheClock)==0){
+			t.classList.add("big");
+			lr2 = lr2a;
+		}
+		t.setAttribute("x1", h + lr1*Math.cos(theta) +"px");
+		t.setAttribute("y1", k + lr1*Math.sin(theta) +"px");
+		t.setAttribute("x2", h + lr2*Math.cos(theta) +"px");
+		t.setAttribute("y2", k + lr2*Math.sin(theta) +"px");
+		numbers.appendChild(t);
+	}
+	
+	function dateToISOWithTimezone(timezoneOffset) {
+		return new Date((Date.now()/1000-timezoneOffset*60)*1000).toISOString().replace('Z', formatTimezoneOffsetString(timezoneOffset));
+	}
+	function formatTimezoneOffsetString(timezone_offset){
+		return (timezone_offset>=0 ? "\u2212" : "+")
+					+String(Math.abs(Math.trunc(timezone_offset/60))).padStart(2,"0")
+					+":"
+					+String(Math.abs(Math.trunc(timezone_offset%60))).padStart(2,"0");
+	}
+	function addTimezoneOffset(offset){
+		const hour_offset = offset/60;
+		var minute_offset = offset%60;
+		while(minute_offset<0){
+			minute_offset += 60;
+		}
+		
+		//check if the hands already exist
+		if(!hands_hours.querySelector('[data-offset="'+hour_offset+'"]:not(#local-time-hours)')){
+			const newline=document.createElementNS("http://www.w3.org/2000/svg", "line");
+			newline.setAttribute("data-offset", hour_offset);
+			hands_hours.appendChild(newline);
+		}
+		if(!hands_minutes.querySelector('[data-offset="'+minute_offset+'"]:not(#local-time-minutes)')){
+			const newline=document.createElementNS("http://www.w3.org/2000/svg", "line");
+			newline.setAttribute("data-offset", minute_offset);
+			hands_minutes.appendChild(newline);
+		}
+	}
+	function removeTimezoneOffset(offsetToRemove){
+		//check timezonebox and remove the hands if no other timezone uses them
+		const remainingtimezones = timezonebox.querySelectorAll("[data-tz]").values().map(a=>Number(a.dataset.tz));
+		const remainingtimezonesarr = [...remainingtimezones];
+		const remaininghouroffsets = remainingtimezonesarr.map(a=>(a/60));
+		const remainingminuteoffsets = remainingtimezonesarr.map(a=>{a%=60;while(a<0){a+=60;}return a;});
+		const hour_offset = offsetToRemove/60;
+		var minoffsetToRemove = offsetToRemove % 60;
+		while(minoffsetToRemove<0){
+			minoffsetToRemove += 60;
+		}
+		const minhand = hands_minutes.querySelector('[data-offset="'+minoffsetToRemove+'"]:not(#local-time-minutes)');
+		const hourhand = hands_hours.querySelector('[data-offset="'+hour_offset+'"]:not(#local-time-hours)');
+		if(minhand && !remainingminuteoffsets.includes(minoffsetToRemove)){
+			minhand.remove();
+		}
+		if(hourhand && !remaininghouroffsets.includes(hour_offset)){
+			hourhand.remove();
+		}
+	}
+	//add local timezone metadata
+	function UpdateLocalTimeMetadata(){
+		const lt_s = document.getElementById("local-time-seconds");
+		const lt_m = document.getElementById("local-time-minutes");
+		const lt_h = document.getElementById("local-time-hours");
+		
+		const timezone_offset = (new Date()).getTimezoneOffset();
+		
+		lt_s.setAttribute("data-offset", "0");
+		lt_m.setAttribute("data-offset", timezone_offset%60);
+		lt_h.setAttribute("data-offset", timezone_offset/60);
+		
+		const ltz=document.getElementById("localtimezone");
+		ltz.textContent = formatTimezoneOffsetString(timezone_offset);
+		ltz.dataset.tz=timezone_offset;
+	}
+	function setHandLine(hand, radius, theta, val, valname){
+		hand.setAttribute("x1", h+"px");
+		hand.setAttribute("y1", k+"px");
+		hand.setAttribute("x2", h + radius*Math.cos(theta) +"px");
+		hand.setAttribute("y2", k + radius*Math.sin(theta) +"px");
+		hand.setAttribute("data-"+valname, val);
+	}
+	function updateHands(handContainer, radius, valmod, val, name){
+		var hands=handContainer.children;
+		for(let i=0;i<hands.length;++i){
+			const hand = hands[i];
+			const offset = Number(hand.getAttribute("data-offset"));
+			const theta = ((val - offset) / valmod) * (2 * Math.PI) - (Math.PI / 2);
+			setHandLine(hand, radius, theta, val - offset, name);
+		}
+	}
+	function updateClockHand(timestamp)
+	{
+		
+		//this gets called every draw just in case DST happens in the user's local time
+		UpdateLocalTimeMetadata();
+		
+		const now = Date.now();
+		const seconds = now/1000%60;
+		const minutes = now/1000/60%60;
+		const hours = now/1000/60/60%hoursOnTheClock;
+		
+		//update second hands
+		updateHands(hands_seconds, sr, 60, seconds, "seconds");
+		//var hands=hands_seconds.children;
+		//for(let i=0;i<hands.length;++i){
+		//	const hand = hands[i];
+		//	const offset = Number(hand.getAttribute("data-offset"));
+		//	const theta = ((seconds - offset) / 60) * (2 * Math.PI) - (Math.PI / 2);
+		//	setHandLine(hand, sr, theta, seconds, "seconds");
+		//}
+		
+		//update minute hands
+		updateHands(hands_minutes, mr, 60, minutes, "minutes");
+		//var hands=hands_minutes.children;
+		//for(let i=0;i<hands.length;++i){
+		//	const hand = hands[i];
+		//	const offset = Number(hand.getAttribute("data-offset"));
+		//	const theta = ((minutes - offset) / 60) * (2 * Math.PI) - (Math.PI / 2);
+		//	setHandLine(hand, mr, theta, minutes, "minutes");
+		//}
+		
+		//update hour hands
+		updateHands(hands_hours, hr, hoursOnTheClock, hours, "hours");
+		//var hands=hands_hours.children;
+		//for(let i=0;i<hands.length;++i){
+		//	const hand = hands[i];
+		//	const offset = Number(hand.getAttribute("data-offset"));
+		//	const theta = ((hours - offset) / hoursOnTheClock) * (2 * Math.PI) - (Math.PI / 2);
+		//	setHandLine(hand, hr, theta, hours, "hours");
+		//}
+		
+		var timezones = timezonebox.children;
+		for(let i=0;i<timezones.length;++i){
+			let box = timezones[i];
+			if(!box?.classList?.contains("timezonecontainer")){
+				continue
+			}
+			let timebox = box.querySelector("[data-tz]");
+			timebox.textContent = dateToISOWithTimezone(Number(timebox.dataset.tz));
+		}
+		
+		// Request the next frame
+		requestAnimationFrame(updateClockHand);
+	}
+	// Start the animation loop
+	requestAnimationFrame(updateClockHand);
+	
+</script>
+</html>

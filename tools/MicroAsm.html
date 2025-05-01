@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+<meta charset="UTF-8" />
+<meta name="description" content="" />
+<meta name="keywords" content="" />
+<meta name="author" content="Jenna Sloan" />
+<title>MicroAsm</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+body {
+	margin: 4px;
+	padding: 4px;
+	border: 1px solid black;
+}
+#menubar {
+	padding: 2px;
+	border: 1px solid black;
+}
+button {
+	display: inline-block;
+}
+.textcontainercontainer {
+	display: inline-block;
+	position: relative;
+	max-width: 100%;
+	vertical-align: top;
+	overflow: auto;
+	flex-basis: fit-content;
+	height: fit-content;
+}
+label {
+	display: block;
+}
+#menubar label {
+	display: inline-block;
+}
+#stepperoptions {
+	display: inline-block;
+	border: 1px solid black;
+}
+#steppercontainer {
+	display: contents;
+}
+table/*:has(>#programstepper)*/ {
+	padding-left: 1em;
+	padding-right: 3px;
+	padding-bottom: 3px;
+}
+textarea {
+	padding: 2px;
+	min-width: 30ch;
+	min-height: 15ch;
+	/*width: calc(100% - 8px);*/
+	max-width: calc(100% - 8px);
+	display: block;
+}
+#argbox {
+	min-width: 20ch;
+}
+#output {
+	
+}
+table {
+	border-collapse: collapse;
+	border-spacing: 0;
+}
+tr, td, th {
+	border: 1px solid black;
+	white-space: pre-wrap;
+	font-family: monospace;
+	border-collapse: inherit;
+	border-spacing: inherit;
+}
+#steppercontainer tr, #steppercontainer td, #steppercontainer th {
+	white-space: pre;
+}
+td:nth-child(1) {
+	text-align: right;
+	padding-left: 3px;
+}
+td:nth-child(2) {
+	text-align: center;
+}
+td:last-child {
+	text-align: left !important;
+	padding-right: 3px;
+}
+td:empty::after {
+	content: "undefined";
+	opacity: 0.5;
+	font-style: italic;
+}
+td span {
+	opacity: 0.75;
+	color: red;
+	font-style: italic;
+}
+td:has(.regex) {
+	padding: 1px;
+	white-space: pre;
+}
+code {
+	opacity: 1;
+	font-style: normal;
+	background-color: rgba(128,128,128,0.15);
+	line-height: initial;
+	padding: 2px;
+	color: purple;
+}
+code {
+}
+code:first-of-type {
+	padding-top: 1px;
+	padding-bottom: 0px;
+}
+code:last-of-type {
+	padding-top: 0px;
+	padding-bottom: 1px;
+}
+code:first-of-type:last-of-type {
+	padding-top: 1px;
+	padding-bottom: 1px;
+}
+code+span {
+	color: unset;
+	opacity: 0.5;
+}
+#ptref td {
+	text-align: right;
+}
+tr.highlighted {
+	background-color: rgba(255,255,0,0.15);
+	outline: 5px solid highlight;
+	outline-offset: -2px;
+	position: relative;
+}
+tr.highlighted>td:first-child::before {
+	content: "⯈";
+	position: absolute;
+	left: -1em;
+	color: highlight;
+	line-height: 1;
+	top: calc(50% - 0.5em);
+}
+body[data-hideblankregisters="1"] #registers>tr:has(td:last-child:empty){
+	display: none;
+}
+td {
+	padding: 3px;
+	line-height: 1;
+	background-color: transparent;
+	transition: background-color 0.5s;
+}
+.blink {
+	transition: background-color 0.0s;
+	background-color: yellow;
+	background-color: mark;
+}
+caption {
+	padding: 1px;
+	caption-side: top;
+}
+#refcontainer {
+	display: contents;
+	/*display: flex;*/
+	flex-direction: row;
+	flex-wrap: wrap;
+}
+#maincontainer {
+	display: contents;
+	/*display: flex;*/
+	flex-direction: row;
+	/*flex-wrap: wrap;*/
+}
+.noshrink {
+	/* used for flow layout which will likely be removed in the future in favor of .rearrangeablecontainer */
+	flex-shrink: 0;
+}
+.rearrangeablecontainer {
+	/* mainly used to implement "rearrangeable" elements (TODO not yet implemented; probably have to use JavaScript. should not actually rearrange the elemenets in the DOM, but just visibly rearrange them. Will also have to work with resizing the window and reorienting the display)*/
+	/*Note: all the elements with this class already have display: contents; */
+	display: contents;
+}
+.resizable {
+	/* mainly used to for resizable elements */
+	resize: horizontal;
+	max-width: fit-content;
+	min-width: min-content;
+}
+.rearrangeable {
+	/* mainly used as a marker for rearrangeable elements. See .rearrangeablecontainer */
+}
+.resizable:has(>textarea) {
+	resize: none;
+}
+</style>
+<script id="MicroAsmExamples">
+const examples = [
+	{
+		"name": "rolldice",
+		"description": "Rolls $1 $2-sided dice",
+		"code":"\"Rolling $1 $2-sided dice: ;=b$2;=d0;=t0;l1?d$1;#6end;!ab;+a1;+ta;\"$a ;+d1;#1l1;end\" total=$t",
+		"args":"300 100"
+	},
+	{
+		"name": "fibonacci",
+		"description": "Computes the first $1 values of the Fibonacci sequence",
+		"code":"\"First $1 numbers in the Fibonacci sequence: ;=d0;=a1;=b1;=c0;l1?d$1;#6end;\"$a, ;=cb;+ba;=ac;+d1;#1l1;end\"...",
+		"args":"100"
+	},
+	{
+		"name": "fibonacci2",
+		"description": "Computes the value of number $1 of the Fibonacci sequence",
+		"code":"\"Fibonacci $1: ;=d1;=a1;=b1;=c0;l1?d$1;#6end;=cb;+ba;=ac;+d1;#1l1;end\"$a, ",
+		"args":"100"
+	},
+	{
+		"name": "rand2",
+		"description": "Outputs a random number from $1, inclusive, to $2, exclusive. [$1, $2)",//. It also swaps the arguments if $1 is greater than $2",
+		"code":"=l$1;=h$2;?hl;#4two;=th;=hl;=lt;two=nh;-nl;!rn;+rl;\"$r",
+		"args":"500 1000"
+	},
+	{
+		"name": "rand0",
+		"description": "Outputs a random number from 0 to 1, inclusive. [0, 1]",
+		"code":"!r2;\"$r",
+		"args":""
+	},
+	{
+		"name": "rand1",
+		"description": "Outputs a random number from 0, inclusive, to $1, exclusive. [0, $1)",
+		"code":"!r$1;\"$r",
+		"args":"100"
+	}
+];
+</script>
+<script id="MicroAssembler">
+/*
+adapted from https://github.com/Jenna1337/ChatBot/blob/master/src/chat/bot/tools/MicroAssembler.java
+*/
+
+String.prototype.matchExact = function(regexp) {
+	return this.match(new RegExp("^"+regexp.source+"$"));
+}
+
+const ComparisonMask = {
+	"NOP": { "mask": 0b000, "description": "No operation"},
+	"LSS": { "mask": 0b001, "description": "Less than"},
+	"EQU": { "mask": 0b010, "description": "Equal to"},
+	"LEQ": { "mask": 0b011, "description": "Less than or Equal to"},
+	"GTR": { "mask": 0b100, "description": "Greater than"},
+	"NEQ": { "mask": 0b101, "description": "NOT Equal to"},
+	"GEQ": { "mask": 0b110, "description": "Greater than or Equal to"},
+	"AOP": { "mask": 0b111, "description": "Always operation"}
+};
+
+var regType = BigInt;
+var registers = ({});
+/**The index of the instruction to be executed next*/
+var proginstr = 0;
+/**The user-defined labels and the value of their associated line.
+   String => Integer
+*/
+var labels = {};
+var compval = ComparisonMask.NOP;
+/**The character to separate lines*/
+const delimiter = ';';
+/**The character to output the value of a register and obtaining values from arguments*/
+const rvalch = '$';
+/**Temporary substitute character for rvalch*/
+const rvalchsub = '\uF024';
+/**The character to escape the following character*/
+const escvalch = '\\';
+/**The escaped version of rvalch*/
+const rvalchesc = rvalch+""+rvalch;
+/**Marks the end of the assembly code and beginning of the code's arguments*/
+const inputseperator = delimiter+".";
+/**The regex for matching registers.*/
+const rRegx = new RegExp("[A-Za-z]");
+const rRegx2 = new RegExp(rRegx.source + rRegx.source);
+const rRegxNum = new RegExp(rRegx.source + "\\-?\\d+");
+const regxNumWord = new RegExp("\\d\\w+");
+/**The regex for printing the value of a register.*/
+const regxTextVar = new RegExp("\\"+rvalch+"("+rRegx.source+")");
+
+const ParType = {
+	"Alfa": { "val": 1, "regex": [rRegx], "description": "Accepts only registers"},
+	"AlfaAlfanum": { "val": 2, "regex": [rRegx2, rRegxNum], "description": "Accepts a register followed by another register, or a register followed by a number"},
+	"NumWord": { "val": 3, "regex": [regxNumWord], "description": "Accepts a single digit followed by a word"},
+	"Text": { "val": 4, "regex": [regxTextVar], "description": "Accepts any arbitrary text that is not an unescaped delimiter"}
+};
+const flags = [
+	{
+		"name": "proginstr",
+		"fullname": "Program Intruction Pointer",
+		"description": "Contains the index of the next executing instruction.",
+		get value(){ return proginstr; }
+	},
+	{
+		"name": "compval",
+		"fullname": "Compare Flag Value",
+		"description": "Holds the value of the result of comparisons. See table \"Comparison Masks\" for possible comparison flag values. See also the \"jump\" instructions.",
+		get value(){ return compval.mask; },
+		get valueDescription() { return compval.description; }
+	}
+];
+
+var output;
+
+/**Parses the argument(s)*/
+function parseargs(op, args)
+{
+	switch(op.partype.val){
+		case ParType.Alfa.val:
+			if (args.matchExact(rRegx))
+				return [args.charAt(0).toLowerCase()];
+			break;
+		case ParType.AlfaAlfanum.val:
+			if (args.matchExact(rRegx2))
+				return [args.charAt(0).toLowerCase(), registers[args.charAt(1).toLowerCase()]];
+			if (args.matchExact(rRegxNum))
+				return [args.charAt(0).toLowerCase(), regType(args.substring(1))];
+			break;
+		case ParType.NumWord.val:
+			if (args.matchExact(regxNumWord) || (args.charAt(0) == '0'))
+				return [parseInt("" + args.charAt(0)), args.substring(1)];
+			break;
+		case ParType.Text.val:
+			return [args];
+		default:
+			throw "Invalid partype " + op.partype;
+	}
+	throw "The argument \"" + args + "\" is invalid for the \'" + Object.entries(instructions).find(a=>a[1]===op)[0] + "\' instruction ";
+}
+const instructions = {
+	'"': {
+		"mne": "out",
+		"partype": ParType.Text,
+		"parameters": "Writes the text of the first argument to the output stream. Use '<code>"+escvalch+"</code>' to escape any character, and use '<code>"+rvalch+"</code>' followed by the name of a register to output the value of the register",
+		"description": "The output instruction",
+		"func":(function(args){
+			var txt = args[0];
+			var m;
+			while(m = txt.match(regxTextVar)){
+				var ch = m[1].charAt(0);
+				txt = txt.replace(rvalch+""+ch, ""+registers[ch.toLowerCase()]);
+			}
+			output+=txt;
+		})
+	},
+	'!': {
+		"mne": "rnd",
+		"partype": ParType.AlfaAlfanum,
+		"parameters": "Generates a random value ranging from 0 (inclusive) to, but not including, the value represented by the second argument (exclusive), and stores the resulting value in the register represented by the first argument",
+		"description": "The set data to a random value from 0 (inclusive) to arg2 (exclusive) instruction",
+		"func":(function(args){registers[args[0]] = regType(Math.floor(Math.random()*Number(args[1])));})
+	},
+	'=': {"mne": "mov", "partype": ParType.AlfaAlfanum, "parameters": "Takes the value represented by the second argument, and stores the value in the register represented by the first argument", "description": "The move data instruction", "func":(function(args){registers[args[0]] = args[1];})},
+	'+': {"mne": "add", "partype": ParType.AlfaAlfanum, "parameters": "Adds the value represented by the second argument to the value of the register represented by the first argument, and stores the resulting value in the register represented by the first argument", "description": "The addition instruction", "func":(function(args){registers[args[0]] += args[1];})},
+	'-': {"mne": "sub", "partype": ParType.AlfaAlfanum, "parameters": "Subtracts the value represented by the second argument from the value of the register represented by the first argument, and stores the resulting value in the register represented by the first argument", "description": "The subtraction instruction", "func":(function(args){registers[args[0]] -= args[1];})},
+	'*': {"mne": "mul", "partype": ParType.AlfaAlfanum, "parameters": "Multiplies the value represented by the second argument by the value of the register represented by the first argument, and stores the resulting value in the register represented by the first argument", "description": "The multiplication instruction", "func":(function(args){registers[args[0]] *= args[1];})},
+	'/': {"mne": "div", "partype": ParType.AlfaAlfanum, "parameters": "Divides the value of the register represented by the first argument by the value represented by the second argument, and stores the resulting value in the register represented by the first argument", "description": "The division instruction", "func":(function(args){registers[args[0]] /= args[1];})},
+	'?': {
+		"mne": "cmp",
+		"partype": ParType.AlfaAlfanum,
+		"parameters": "Compares the value of the register represented by the first argument with the value represented by the second argument, and sets the comparison flag accordingly. See also table \"Comparison Masks\" for possible comparison flag values",
+		"description": "The compare instruction",
+		"func":(function(args){
+			var val1 = registers[args[0]];
+			var val2 = args[1];
+			if(val1>val2)
+				compval=ComparisonMask.GTR;
+			else if(val1<val2)
+				compval=ComparisonMask.LSS;
+			else if(val1==val2)
+				compval=ComparisonMask.EQU;
+			else
+				compval=ComparisonMask.NOP;
+		})
+	},
+	
+	'&': {"mne": "and", "partype": ParType.AlfaAlfanum, "parameters": "Performs a bitwise AND of the value of the register represented by the first argument with the value represented by the second argument, and stores the resulting value in the register represented by the first argument", "description": "The bitwise NOT instruction", "description": "The bitwise AND instruction", "func":(function(args){registers[args[0]] &= args[1];})},
+	'|': {"mne": "orr", "partype": ParType.AlfaAlfanum, "parameters": "Performs a bitwise OR of the value of the register represented by the first argument with the value represented by the second argument, and stores the resulting value in the register represented by the first argument", "description": "The bitwise OR instruction", "func":(function(args){registers[args[0]] |= args[1];})},
+	'~': {"mne": "not", "partype": ParType.Alfa, "parameters": "Performs a bitwise NOT of the value of the register represented by the first argument, and stores the resulting value in the register represented by the first argument", "description": "The bitwise NOT instruction", "func":(function(args){registers[args[0]] = ~registers[args[0]];})},
+	'<': {"mne": "lft", "partype": ParType.AlfaAlfanum, "parameters": "Shifts the bits representing the value the register represented by the first argument to the left by the value represented by the second argument, and stores the resulting value in the register represented by the first argument", "description": "The bit-shift left without carry instruction", "func":(function(args){registers[args[0]] <<= args[1];})},
+	'>': {"mne": "rgt", "partype": ParType.AlfaAlfanum, "parameters": "Shifts the bits representing the value the register represented by the first argument to the right by the value represented by the second argument, and stores the resulting value in the register represented by the first argument", "description": "The bit-shift left without carry instruction", "description": "The bit-shift right without carry instruction", "func":(function(args){registers[args[0]] >>= args[1];})},
+	'#': {
+		"mne": "jmp",
+		"partype": ParType.NumWord,
+		"parameters": "If the current value of the comparison flag is contained within the value represented by the first argument, jumps to the label represented by the second argument. Note that if the program jumps, the program will next execute the line on which the label resides.<!-- This means you can do <code>a#7a</code> to effectively perform a \"halt and catch fire\", causing an infinite loop.--> See also table \"Comparison Masks\" for possible comparison flag values",
+		"description": "The jump to label instruction",
+		"func":(function(args){
+			var condition = args[0];
+			if(condition==0)
+				return;
+			var target = args[1].toLowerCase();
+			var targetline = labels[target];
+			if(targetline !== undefined){
+				if((compval.mask&condition)>0 || condition==ComparisonMask.AOP.mask)
+					proginstr = targetline;
+			}
+			else{
+				throw "No line found with label \""+target+"\"";
+			}
+		})
+	}
+};
+var lines;
+var cmdinstr;
+var cmdargs;
+/**Runs the code specified in <code>input</code> and returns it's output.<br/>
+ * Format: [label]opcode(parameters)
+ * @param input The code to assemble and execute.
+ * @return The output of the assembled code.
+ */
+function assemble(input, args = null){
+	if(args == null){
+		var argstart = input.indexOf(inputseperator);
+		args = "";
+		if(argstart>=0){
+			args = input.substring(argstart+inputseperator.length);
+			input=input.substring(0,argstart);
+		}
+	}
+	let progargs = args.split(" ");
+	input = input.replaceAll(rvalchesc, "" + rvalchsub);
+	input = input.replaceAll(rvalch + "0", args);
+	for (let i = 0; i < progargs.length && i < 9; ++i)
+		input = input.replaceAll(rvalch + "" + (i + 1), progargs[i]);
+	/*for (let mask in ComparisonMask) {
+		input = input.replaceAll(ComparisonMask[mask].replTarget, ComparisonMask[mask].mask+"");
+	}*/
+	lines = input.split(new RegExp("(?<!\\" + escvalch + ")" + delimiter));
+	cmdinstr = new Array(lines.length);
+	cmdargs = new Array(lines.length);
+	let line;
+	labels = {};
+	/*parse the input*/
+	prolines:
+		for (proginstr = 0; proginstr < lines.length; ++proginstr) {
+			line = lines[proginstr];
+			line = line.replaceAll(new RegExp("\\" + escvalch + "(.)", 'g'), "$1");
+			for (let instruct of Object.entries(instructions)) {
+				let operator = instruct[0];
+				if (line.indexOf(operator) >= 0) {
+					let lblcmd = line.split(operator, 2);
+					cmdinstr[proginstr] = instruct[1];
+					cmdargs[proginstr] = lblcmd[1];
+					if (lblcmd[0].length > 0)
+						labels[lblcmd[0]] = proginstr - 1;
+					continue prolines;
+				}
+			}
+			labels[line] = proginstr - 1;
+		}
+	output = "";
+	if(document.getElementById("steppertoggle")?.checked) {
+		showregisters();
+		var programstepper = document.getElementById("programstepper");
+		programstepper.innerHTML = "";
+		for(let i=0;i<lines.length;++i)	{
+			let label = Object.entries(labels).find(a=>a[1]==(i-1));
+			label = label?.[0];
+			let instr = Object.entries(instructions).find(a=>a[1]===cmdinstr[i]);
+			let cargs = cmdargs[i];
+			let row = document.createElement("tr");
+			let le = document.createElement("td"); le.textContent = label; injectspans(le); row.appendChild(le);
+			let ie = document.createElement("td"); ie.textContent = instr?.[0]; row.appendChild(ie);
+			let ae = document.createElement("td"); ae.textContent = cargs; injectspans(ae); ae.dataset.partype = Object.entries(ParType).find(a=>a[1]==instr?.[1].partype)?.[0]; row.appendChild(ae);
+			programstepper.appendChild(row);
+		}
+		return step();
+	}
+	else{
+		/*execute the parsed input*/
+		for (proginstr = 0; proginstr < lines.length; ++proginstr) {
+			let instr = cmdinstr[proginstr];
+			if (instr != undefined)
+				instr.func(parseargs(instr, cmdargs[proginstr]));
+		}
+	}
+	showregisters();
+	return output.replaceAll("" + rvalchsub, "" + rvalch);
+}
+var stepping = false;
+var flags_elems = null;
+function step() {
+	if(flags_elems === null){
+		flags_elems = Object.fromEntries(Array.from(document.getElementById("flags").children).map(a=>{var c=a.children;return[c[0].textContent,c[1]];}));
+	}
+	
+	if(!stepping) {
+		stepping = true;
+		runcode();
+		document.getElementById("stopbtn").disabled = document.getElementById("runtoendbtn").disabled = !(document.getElementById("steppertoggle").disabled = document.getElementById("runbtn").disabled = stepping = true);
+		proginstr = -1;
+	}
+	document.querySelectorAll(".highlighted").forEach(a=>a.classList.remove("highlighted"));
+	if (proginstr < lines.length) {
+		let instr = cmdinstr[proginstr];
+		if (instr != undefined) {
+			var args = parseargs(instr, cmdargs[proginstr]);
+			//flash the register if the register changes value
+			switch (instr.partype) {
+				case ParType.AlfaAlfanum:
+				case ParType.Alfa:
+					var wrelem = document.getElementById("registers").children[args[0].charCodeAt(0)-97].children[1];
+					wrelem.classList.add("blink");
+					window.setTimeout(()=>{wrelem.classList.remove("blink");}, 1)
+					break;
+				case ParType.NumWord:
+				case ParType.Text:
+					break;
+				default:
+					throw "Invalid ParType "+instr.partype;
+			}
+			instr.func(args);
+		}
+		proginstr++;
+	}
+	if (proginstr >= lines.length) {
+		document.getElementById("stopbtn").disabled = document.getElementById("runtoendbtn").disabled = !(document.getElementById("steppertoggle").disabled = document.getElementById("runbtn").disabled = stepping = false);
+	}
+	document.getElementById("programstepper").children[proginstr]?.classList?.add("highlighted");
+	showregisters();
+	document.getElementById("output").value = output.replaceAll("" + rvalchsub, "" + rvalch);
+	
+	flags.forEach(f=>{
+		var felem = flags_elems[f.name];
+		var fval = f.value;
+		if(felem.textContent != fval){
+			felem.textContent = fval;
+			let d = f.description;
+			if(d!=undefined){
+				felem.title = f.description;
+			}
+			felem.classList.add("blink");
+			window.setTimeout(()=>{felem.classList.remove("blink");}, 1)
+		}
+	});
+	
+}
+function stopstepping() {
+	document.querySelectorAll(".highlighted").forEach(a=>a.classList.remove("highlighted"));
+		document.getElementById("stopbtn").disabled = document.getElementById("runtoendbtn").disabled = !(document.getElementById("steppertoggle").disabled = document.getElementById("runbtn").disabled = stepping = false);
+	proginstr = null;
+}
+function runtoend() {
+	var timelog = document.getElementById("elapsedtime");
+	
+	var starttime = Date.now();
+	while(stepping) step();
+	var stoptime = Date.now();
+	console.log(timelog.textContent = "Elapsed time: "+(stoptime-starttime)/1000 + " seconds");
+}
+
+window.addEventListener("load", function(){
+	var exbox = document.getElementById("examples");
+	for(var ex of examples) {
+		var opt = document.createElement("option");
+		opt.textContent = ex.name;// + " - " + ex.description;
+		opt.setAttribute("value", ex.name);
+		exbox.appendChild(opt)
+	}
+	var relem = document.getElementById("registers");
+	for(var i=0;i<26;++i) {
+		var r = String.fromCharCode(97+i);
+		let row = document.createElement("tr");
+		let re = document.createElement("td"); re.textContent = r; row.appendChild(re);
+		let ve = document.createElement("td"); ve.textContent = registers[r]; injectspans(ve); row.appendChild(ve);
+		ve.addEventListener("transitionend", (event) => {ve.backgroundColor = "";});
+		relem.appendChild(row);
+	}
+	var irefelem = document.getElementById("instrref");
+	Object.entries(instructions).forEach((a)=>{
+		let row = document.createElement("tr");
+		let se = document.createElement("td"); se.textContent = a[0]; row.appendChild(se);
+		let te = document.createElement("td"); te.textContent = Object.entries(ParType).find(b=>b[1]==a[1].partype)[0]; row.appendChild(te);
+		let pe = document.createElement("td"); pe.innerHTML = a[1].parameters; row.appendChild(pe);
+		let de = document.createElement("td"); de.textContent = a[1].description; row.appendChild(de);
+		irefelem.appendChild(row);
+	});
+	var cmprefelem = document.getElementById("compref");
+	Object.values(ComparisonMask).forEach((a)=>{
+		let row = document.createElement("tr");
+		let me = document.createElement("td"); me.textContent = a.mask; row.appendChild(me);
+		let de = document.createElement("td"); de.textContent = a.description; row.appendChild(de);
+		cmprefelem.appendChild(row);
+	});
+	var parrefelem = document.getElementById("ptref");
+	Object.entries(ParType).forEach((a)=>{
+		let row = document.createElement("tr");
+		let me = document.createElement("td"); me.textContent = a[0]; row.appendChild(me);
+		let re = document.createElement("td");
+		for(var r in a[1].regex) {
+			if(r!=0) {
+				var os = document.createElement("span");
+				os.innerHTML = "\n&nbsp;or ";
+				re.appendChild(os);
+			}
+			var s = document.createElement("code");
+			s.classList.add("regex");
+			s.textContent = a[1].regex[r];
+			re.appendChild(s);
+		}
+		row.appendChild(re);
+		let de = document.createElement("td"); de.textContent = a[1].description; row.appendChild(de);
+		parrefelem.appendChild(row);
+	});
+	var flagselem = document.getElementById("flags");
+	var flagrefelem = document.getElementById("flagref");
+	for(var f of flags) {
+		let row = document.createElement("tr");
+		let fe = document.createElement("td"); fe.textContent = f.name; fe.title = f.description ?? ""; row.appendChild(fe);
+		let ve = document.createElement("td"); ve.textContent = f.value; ve.title = f.valueDescription ?? ""; row.appendChild(ve);
+		flagselem.appendChild(row);
+		
+		let refrow = document.createElement("tr");
+		let ne = document.createElement("td"); ne.textContent = f.name; refrow.appendChild(ne);
+		let fne = document.createElement("td"); fne.textContent = f.fullname; refrow.appendChild(fne);
+		let de = document.createElement("td"); de.textContent = f.description; refrow.appendChild(de);
+		flagrefelem.appendChild(refrow);
+	}
+	document.getElementById("delimspan").textContent = delimiter;
+});
+function injectspans(elem) {
+	elem.innerHTML = elem.innerHTML
+	.replaceAll("\n", "<span>\\n</span>")
+	.replaceAll("\r", "<span>\\r</span>")
+	.replaceAll("\f", "<span>\\f</span>")
+	.replaceAll("\t", "<span>\\t</span>")
+	.replaceAll("\v", "<span>\\v</span>")
+	;
+}
+function loadexample() {
+	var exname = document.getElementById("examples").value;
+	var ex = examples.find(a=>a.name==exname);
+	console.log(ex);
+	document.getElementById("cmdbox").value = ex.code;
+	document.getElementById("argbox").value = ex.args;
+	toggleintegratedargs();
+}
+function toggleintegratedargs() {
+	var cb = document.getElementById("integratedargstoggle").checked;
+	if(event && event.type=="change" && event.target.id=="integratedargstoggle"){
+		if(cb) {
+			document.getElementById("cmdbox").value += inputseperator + document.getElementById("argbox").value;
+		} else {
+			var input = document.getElementById("cmdbox").value;
+			var argstart = input.indexOf(inputseperator);
+			var args = document.getElementById("argbox").value;
+			if(argstart>=0){
+				args = input.substring(argstart+inputseperator.length);
+				input=input.substring(0,argstart);
+			}
+			document.getElementById("cmdbox").value = input;
+			document.getElementById("argbox").value = args;
+		}
+	}
+	matchargsvisibility();
+}
+function matchargsvisibility() {
+	var cb = document.getElementById("integratedargstoggle").checked;
+	var argboxbox = document.getElementById("argboxbox");
+	if(cb) {
+		argboxbox.style.visibility = "hidden";
+		argboxbox.style.display = "none";
+	} else {
+		argboxbox.style.visibility = "visible";
+		argboxbox.style.display = "";
+	}
+}
+function showregisters() {
+	var re = document.getElementById("registers");
+	if(!re)
+		return;
+	for(var i=0; i<26; ++i) {
+		re.children[i].children[1].textContent = registers[String.fromCharCode(i+97)];
+	}
+	//shows flags
+	var fe = document.getElementById("flags");
+	for(var fi in flags) {
+		var f=fe.children[fi];
+	}
+}
+window.addEventListener("load", ()=>{
+	document.querySelectorAll("*[onchange]").forEach(a=>{try{a.onchange();}catch(e){console.error(e);}});
+});
+function togglestepper() {
+	var runbtn = document.getElementById("runbtn");
+	var optdiv = document.getElementById("stepperoptions");
+	var stepdiv = document.getElementById("steppercontainer");
+	var optbr = document.querySelector("#stepperoptions+br");
+	if(document.getElementById("steppertoggle").checked) {
+		runbtn.textContent = "Debug Code";
+		optdiv.style.display = "";
+		stepdiv.style.display = "";
+		optbr.style.display = "";
+	} else {
+		runbtn.textContent = "Run Code";
+		optdiv.style.display = "none";
+		stepdiv.style.display = "none";
+		optbr.style.display = "none";
+	}
+}
+function runcode() {
+	var cmds = document.getElementById("cmdbox").value;
+	var args = document.getElementById("argbox").value;
+	var output = document.getElementById("output");
+	var timelog = document.getElementById("elapsedtime");
+	
+	var str;
+	var starttime = Date.now();
+	if(document.getElementById("integratedargstoggle").checked){
+		str = assemble(cmds);
+	}else{
+		str = assemble(cmds, args);
+	}
+	//TODO catch thrown exceptions 
+	var stoptime = Date.now();
+	console.log(timelog.textContent = "Elapsed time: "+(stoptime-starttime)/1000 + " seconds");
+	output.value = str;
+}
+</script>
+</head>
+<body lang="en-US" data-hideblankregisters="1">
+<noscript><p style="font-size: min(80vh, 80vw); color: red; margin: 0; padding: 0;">:(</p><p style="font-size: larger; color: red; margin: 0; padding: 0; font-weight: bold; margin-bottom: 3em; ">JavaScript is required</p></noscript>
+<div id="menubar">
+<button onclick="loadexample()">Load Example</button><select id="examples" onchange="document.getElementById('exampledescription').textContent = examples.find(a=>a.name==document.getElementById('examples').value)?.description"></select> <span id="exampledescription"></span><br />
+<input type="checkbox" id="clearregcb" checked="" /><label for="clearregcb">&nbsp;Clear Registers On Run</label><br />
+<input type="checkbox" id="integratedargstoggle" onchange="toggleintegratedargs()" /><label for="integratedargstoggle">&nbsp;Integrated Arguments</label><br />
+<input type="checkbox" id="steppertoggle" onchange="togglestepper()" checked="" /><label for="steppertoggle">&nbsp;Show Debugger</label><br />
+<input type="checkbox" id="reftoggle" onchange="document.getElementById('refcontainer').style.display = document.getElementById('reftoggle').checked ? '' : 'none'" checked="" /><label for="reftoggle">&nbsp;Show Reference</label><br />
+<div id="stepperoptions"><input type="checkbox" id="hideblankregisters" onchange="document.body.dataset.hideblankregisters=Number(document.getElementById('hideblankregisters').checked)" checked="" /><label for="hideblankregisters">&nbsp;Hide Blank Registers</label> <button onclick="step()">Step</button> <button onclick="stopstepping()" id="stopbtn" disabled="">Stop Stepping</button> <button onclick="runtoend()" id="runtoendbtn" disabled="">Run to end</button></div><br />
+<button onclick="runcode()" id="runbtn">Run Code</button><br />
+<div id="argboxbox"><label for="argbox">Arguments:&nbsp;</label><input type="text" id="argbox" /></div>
+</div><br />
+<div id="maincontainer" class="rearrangeablecontainer">
+<div class="textcontainercontainer noshrink resizable"><label for="cmdbox">Code:&nbsp;</label><textarea id="cmdbox"></textarea></div>
+<div class="textcontainercontainer noshrink resizable"><label for="output">Output:&nbsp;</label><textarea id="output"></textarea><span id="elapsedtime">Elapsed time: N/A</span></div>
+<div id="steppercontainer" class="rearrangeablecontainer">
+<table class="textcontainercontainer noshrink resizable rearrangeable"><caption>Program Stepper</caption><thead><tr><th>Label</th><th>Instr</th><th>Args</th></tr></thead><tbody id="programstepper"></tbody></table>
+<table class="textcontainercontainer noshrink resizable rearrangeable"><caption>Flags</caption><thead><tr><th>Name</th><th>Value</th></tr></thead><tbody id="flags"></tbody></table>
+<table class="textcontainercontainer resizable rearrangeable"><caption>Registers</caption><thead><tr><th>Register</th><th>Value</th></tr></thead><tbody id="registers"></tbody></table>
+</div>
+</div>
+<div id="refcontainer" class="rearrangeablecontainer">
+<table class="textcontainercontainer resizable rearrangeable"><caption>Instruction Reference</caption><thead><tr><th colspan="4">General syntax: <code>[label](instr)(args);</code> Note that <code id="delimspan"></code> functions as the delimiter, and labels are only required if you want to jump to that line.</th></tr><tr><th>Instr</th><th>ParType</th><th>Parameter Information</th><th>Description</th></tr></thead><tbody id="instrref"></tbody></table>
+<table class="textcontainercontainer resizable rearrangeable"><caption>Comparison Masks</caption><thead><tr><th>Mask</th><th>Description</th></tr></thead><tbody id="compref"></tbody></table>
+<table class="textcontainercontainer resizable rearrangeable"><caption>Parameter Types</caption><thead><tr><th>ParType</th><th>Matching Regex</th><th>Description</th></tr></thead><tbody id="ptref"></tbody></table>
+<table class="textcontainercontainer resizable rearrangeable" style="width: 50ch;"><caption>Flags Reference</caption><thead><tr><th>Name</th><th>Full Name</th><th>Description</th></tr></thead><tbody id="flagref"></tbody></table>
+</div>
+<span id="last-modified" style="display: block;">Last time I remembered to update this date: 2023-11-18T21:54Z</span>
+</body>
+</html>

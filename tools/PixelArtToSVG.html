@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Pixel Art to SVG</title>
+<style>
+table, tr, td {
+	border: 1px solid black;
+	border-spacing: 0px;
+	/*border-collapse: collapse;*/
+}
+tr, td {
+	height: 100px;
+	position: relative;
+}
+pre, .scrollcell {
+	height: 100px;
+	overflow: auto;
+	margin: 0px;
+	padding: 5px;
+	max-width: 200px;
+	word-wrap: break-word;
+}
+img {
+	image-rendering: pixelated;
+}
+img, svg {
+	margin: 0;
+	padding: 0;
+}
+td {
+	padding: 1px;
+}
+</style>
+</head>
+<script>
+var useshorthand = true;
+var fuzzylimit = 0x1F;
+</script>
+<body>
+<noscript>This page requires JavaScript</noscript>
+<button onclick="previewtable.innerHTML=''">Clear output</button>
+<input id="inputfiles" type="file" multiple onchange="previewFiles()"><br>
+<label for="inputuseshorthand">Use ShorthandColors </label><input id="inputuseshorthand" type="checkbox" checked="" onchange="useshorthand = this.checked"><br>
+<label for="inputfuzzylimit">Color similarity threshold </label><input id="inputfuzzylimit" type="number" value="31" onchange="fuzzylimit = Number(this.value)"><br>
+<button onclick="previewFiles()">reload</button>
+<script>
+var previewtable = document.createElement('table');
+document.body.appendChild(previewtable);
+var previewtablebody = document.createElement('tbody');
+document.body.appendChild(previewtable);
+function clearTable(){
+}
+function getpreview(datauri){console.log(arguments);
+	var preview = document.createElement("img");
+	preview.src = datauri;
+	return preview;
+}
+function getColorData(imgele){
+	var canvas = document.createElement('canvas');
+	document.body.appendChild(canvas);
+	canvas.width = imgele.naturalWidth;
+	canvas.height = imgele.naturalHeight;
+	canvas.getContext('2d').drawImage(imgele, 0, 0, imgele.naturalWidth, imgele.naturalHeight);
+	var pixelData = canvas.getContext('2d')
+		.getImageData(0, 0, imgele.naturalWidth, imgele.naturalHeight)
+		.data.reduce(function(result, value, index, array) {
+			if (index % 4 === 0)
+				result.push(array.slice(index, index + 4));
+			return result;
+		}, []).map(function(v){
+			return [v,"#"+Array.from(v).map(i=>i.toString(16).padStart(2,"0").substring(0,useshorthand ? 1 : 2)).join("")];
+		});
+	document.body.removeChild(canvas);
+	return pixelData;
+}
+function pixelArtToSVG(imgele){
+	const imgwidth = imgele.naturalWidth;
+	const imgheight = imgele.naturalHeight;
+	var pixelData = getColorData(imgele);
+	//reduce colors
+	{
+		let uniqueColors = [];
+		function fuzzyColorFinder(a,e){
+			return e[1]==a[1]
+				|| Array.from(e[0]).map((c,i)=>{
+					return (c-fuzzylimit)<a[0][i] && (c+fuzzylimit)>a[0][i]
+					}).reduce((a,b)=>a&&b);
+		}
+		//reduce colors
+		pixelData = pixelData.map(a=>{
+			let foundindex = -1;
+			if(0>(foundindex=uniqueColors.findIndex(e=>fuzzyColorFinder(a,e)))){
+				uniqueColors.push(a);
+				foundindex = uniqueColors.length-1;
+			}
+			return uniqueColors[foundindex];
+		});
+	}
+	var output;
+	{
+		// Personally, I'd like to have it more optimized, like tracing aroung the outline for each color,
+		// but idk how that'd work, and I'd make it handle shapes with holes in them
+		// also I'd like it to have an option to adjust the scaling 
+		// This section is from https://codepen.io/shshaw/pen/XbxvNj
+			function each(obj,fn) {
+			  var length = obj.length,
+				  likeArray = ( length === 0 || ( length > 0 && (length - 1) in obj ) ),
+				  i = 0;
+
+			  if ( likeArray ) {
+				for ( ; i < length; i++ ) { if ( fn.call( obj[ i ], i, obj[ i ] ) === false ) { break; } }
+			  } else {
+				for (i in obj) { if ( fn.call( obj[ i ], i, obj[ i ] ) === false ) { break; } }
+			  }
+			}
+
+			function componentToHex(c) {
+			  var hex = parseInt(c).toString(16);
+			  return hex.length == 1 ? "0" + hex : hex;
+			}
+
+			function getColor(r,g,b,a){
+			  a = parseInt(a);
+			  if ( a === undefined || a === 255 ) { return "#" + componentToHex(r) + componentToHex(g) + componentToHex(b); }
+			  if ( a === 0 ) { return false; }
+			  return 'rgba('+r+','+g+','+b+','+(a/255)+')';
+			}
+
+			// Optimized for horizontal lines
+			function makePathData(x,y,w) { return ('M'+x+' '+y+'h'+w+''); }
+			function makePath(color,data) { return '<path transform="translate(0 0.5)" stroke-width="1" fill="none" stroke="'+color+'" d="'+data+'" />\n'; }
+
+			function colorsToPaths(colors){
+
+			  var output = ""; 
+
+			  // Loop through each color to build paths
+			  each(colors,function(color,values){
+				var orig = color;
+				color = getColor.apply(null,color.split(','));
+
+				if ( color === false ) { return; }
+
+				var paths = [];
+				var curPath;
+				var w = 1;
+
+				// Loops through each color's pixels to optimize paths
+				each(values,function(){
+
+				  if ( curPath && this[1] === curPath[1] && this[0] === (curPath[0] + w) ) {
+					w++;
+				  } else {
+					if ( curPath ) {
+					  paths.push(makePathData(curPath[0],curPath[1],w));
+					  w = 1;
+					}
+					curPath = this;
+				  }
+
+				});
+
+				paths.push(makePathData(curPath[0],curPath[1],w)); // Finish last path
+				output += makePath(color,paths.join(''));
+			  });
+
+			  return output;
+			}
+
+			function getColors(data) {
+			  var colors = {},
+				  len = data.length,
+				  w = imgwidth,
+				  h = imgheight,
+				  x = 0,
+				  y = 0,
+				  i = 0,
+				  color;
+
+			  for (; i < len; i+= 4) {
+				if ( data[i+3] > 0 ) {
+				  color = data[i]+','+data[i+1]+','+data[i+2]+','+data[i+3];
+				  colors[color] = colors[color] || [];
+				  x = (i / 4) % w;
+				  y = Math.floor((i / 4) / w);
+				  colors[color].push([x,y]);
+				}                      
+			  }
+
+			  return colors;
+			}
+
+		let colors = getColors(pixelData.map(a=>Array.from(a[0])).flat());
+		let paths = colorsToPaths(colors);
+		output = '<svg xmlns="http://www.w3.org/2000/svg" shape-rendering=\"optimizeSpeed\" height="'+imgheight+'" width="'+imgwidth+'" viewBox="0 0 '+imgwidth+' '+imgheight+'">\n' + paths + '</svg>';
+	}
+	console.log(output);
+	{
+		pixelData = pixelData.map(a=>a[1]);
+		let donepixels = new Array(pixelData.length).fill(false);
+		let paths = [];
+		function ArrPosToCoords(i,width){
+			return [i % width, Math.floor(i / width)];
+		}
+		function CoordsToArrPos(x,y,width){
+			return x + width*y;
+		}
+		pixelData.forEach((startcolor,startindex)=>{
+			if(donepixels[startindex]){
+				return;
+			}
+			let currentpath = [];
+			currentpath.push(ArrPosToCoords(startindex))
+			let completepath = false;
+			let currentindex = startindex;//TODO choose a direction
+			while(!completepath){
+				let currentcolor = pixelData[currentindex];
+				if(currentcolor !== startcolor || donepixels[startindex]){
+					//TODO try another direction
+					continue;
+				}
+				donepixels[startindex] = true;
+				//TODO trace around the current color
+				
+				if(completepath = currentindex==startindex){
+					break;
+				}
+			}
+			//debugger
+			let pathtxt = "";//TODO
+			paths.push(pathtxt);
+		});
+		debugger
+	}
+	return output;
+}
+function previewFiles() {
+	var files    = document.getElementById("inputfiles").files;
+	var i=0;
+	(function next(){
+		file = files[i++];console.log(files[i])
+		if (file){
+			var url = URL.createObjectURL(file);
+						var row = document.createElement('tr');
+			var fname = document.createElement('div');
+			fname.classList.add("scrollcell");
+			fname.textContent=file.name;
+			var fname_wrapper = document.createElement('td');
+			fname_wrapper.appendChild(fname);
+
+			var preview = getpreview(url);
+			preview.style="max-width: 100px; max-height: 100px";
+			preview.style.zIndex= "1";
+			preview.style.top= "1px";
+			preview.style.left= "1px";
+			preview.style.position= "absolute";
+			
+			console.log(url);
+			var cell_preview = document.createElement('td');
+			cell_preview.textContent = "Loading...";
+			cell_preview.style="width: 100px; min-width: 100px; background-color: white; vertical-align: top;";
+
+			var cell_txt_wrapper = document.createElement('td');
+			cell_txt_wrapper.style="max-width: 1000px; ";
+			preview.onload = (function(){
+				var cell_txt = document.createElement('pre');
+				cell_preview.innerHTML += cell_txt.textContent = pixelArtToSVG(preview).toString();
+				var svgelem = cell_preview.querySelector("svg");
+				//svgelem.setAttribute("opacity", "0.5");
+				svgelem.style.maxWidth = preview.style.maxWidth;
+				svgelem.style.maxHeight = preview.style.maxHeight;
+				svgelem.style.position= "absolute";
+				svgelem.style.zIndex= "2";
+				svgelem.style.top= preview.style.top;
+				svgelem.style.left= preview.style.left;
+				svgelem.setAttribute("preserveAspectRatio", "xMidYMin meet");
+				cell_txt.style=" height: 100%; max-width:unset;";
+				cell_txt_wrapper.appendChild(cell_txt);
+			});
+
+			cell_preview.appendChild(preview);
+			row.appendChild(fname_wrapper);
+			row.appendChild(cell_preview);
+			row.appendChild(cell_txt_wrapper);
+			previewtable.appendChild(row);
+			next();
+		}
+	})();
+}
+</script>
+</body>
+</html>

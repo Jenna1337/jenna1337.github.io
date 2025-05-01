@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><title>CSS Orbit</title>
+<style>
+svg {
+	border: 1px solid black;
+}
+</style>
+</head>
+<body>
+<svg width="256px" height="256px" xmlns="http://www.w3.org/2000/svg">
+	  <defs>
+		<linearGradient id="Gradient2" x1="0" x2="0" y1="0" y2="1">
+			<stop offset="0%" stop-color="white" />
+			<stop offset="25%" stop-color="blue" />
+			<stop offset="50%" stop-color="green" />
+			<stop offset="75%" stop-color="blue" />
+			<stop offset="100%" stop-color="white" />
+		</linearGradient>
+	</defs>
+	<style>
+		/* <![CDATA[ */
+		@property --theta {
+			syntax: "<angle>";
+			inherits: true;
+			initial-value: 0deg;
+		}
+		
+		@keyframes orbit{
+			from {
+				--theta: 0deg;
+			}
+			to {
+				--theta: 360deg;
+			}
+		}
+		@keyframes circlespin{
+			from {
+				rotate: 0deg;
+			}
+			to {
+				rotate: 360deg;
+			}
+		}
+		svg{
+			background-color: #C0C0C0;
+			--h: 128px;
+			--k: 128px;
+			--r: 100px;
+			#orbitoutline {
+				cx: var(--h);
+				cy: var(--k);
+				r: var(--r);
+			}
+			*.point {
+				--x: calc(var(--h) + var(--r) * cos(var(--theta)));
+				--y: calc(var(--k) + var(--r) * sin(var(--theta)));
+				cx: var(--x);
+				cy: var(--y);
+				animation: 3s linear infinite orbit, 0.981s linear infinite circlespin;
+				/* animation: 31558149s linear infinite orbit, 86164.1s linear infinite circlespin;*/
+				transform-box: fill-box;
+				transform-origin: center center;
+			}
+		}
+		/* ]]> */
+	</style>
+	<g>
+		<circle id="orbitoutline" fill="transparent" fill-opacity="0" stroke="#F00" stroke-width="2px" stroke-dasharray="5,5" />
+		<circle r="20" fill="url(#Gradient2)" class="point" />
+	</g>
+</svg>
+
+</body>
+</html>

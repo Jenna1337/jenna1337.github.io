@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+<meta charset="UTF-8" />
+<meta name="description" content="Network Visualizer" />
+<meta name="keywords" content="Network,Visualizer" />
+<meta name="author" content="Jenna Sloan" />
+<title>Network Visualizer</title>
+<style>
+button {
+	
+}
+svg {
+	display: block;
+}
+.link {
+	stroke-width: 1px;
+}
+.node {
+	fill: blue;
+	r: 2.7%;
+	/*r: 20px;*/
+}
+</style>
+<script>
+const size = 500;
+const mincount = 2;
+const maxcount = 100;
+
+// Create an SVG element dynamically
+const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+svg.setAttribute("width", size);
+svg.setAttribute("height", size);
+//svg.setAttribute("preserveAspectRatio", "xMidYMin meet");
+
+// Create a circle element and set its attributes
+const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+circle.setAttribute("class", "node");
+circle.setAttribute("cx", -size);
+circle.setAttribute("cy", -size);
+//circle.setAttribute("r", "50");
+//circle.setAttribute("fill", "red");
+{
+	const title = document.createElementNS("http://www.w3.org/2000/svg", "title");
+	title.textContent = "Network Graph";
+	svg.appendChild(title);
+}
+const nodegroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+nodegroup.id = "nodegroup";
+const linegroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+linegroup.id = "linegroup";
+svg.appendChild(linegroup);
+svg.appendChild(nodegroup);
+
+var networknodes = [];
+var lines = [];
+function createNetworkNode(){
+	// Create a circle element and set its attributes
+	var c = circle.cloneNode();
+	c.dataset["index"] = networknodes.length;
+	
+	networknodes.push(c);
+	// Add the circle to the SVG element
+	nodegroup.appendChild(c);
+	
+	adjustPositions();
+}
+function removeNetworkNode(){
+	if(networknodes.length > mincount){
+		var c = networknodes.pop();
+		c.remove();
+		
+		adjustPositions();
+	}
+}
+function adjustPositions(){
+	var center = { x: size/2, y: size/2 }; // coordinates of the center point
+	var radius = 0.4*size; // radius of the circle
+	var numElements = networknodes.length; // number of elements
+	
+	var angle = (2 * Math.PI) / numElements; // calculate the angle between each element
+	
+	for (let i = 0; i < numElements; i++) {
+		var c = networknodes[i];
+		
+		var x = center.x + radius * Math.cos(i * angle);
+		var y = center.y + radius * Math.sin(i * angle);
+		
+		c.setAttribute("cx", x);
+		c.setAttribute("cy", y);
+	}
+	drawLines();
+}
+var serverless = false;
+function drawLines(){
+	lines.forEach(l=>l.remove());
+	lines = [];
+	
+	for (let i = 0; i < networknodes.length && (serverless ? i===0 : true); i++) {
+		var elementA = networknodes[i];
+		
+		for (let j = i + 1; j < networknodes.length; j++) {
+			var elementB = networknodes[j];
+			
+			var line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+			line.setAttribute("class", "link");
+			line.setAttribute("x1", elementA.getAttribute("cx"));
+			line.setAttribute("y1", elementA.getAttribute("cy"));
+			line.setAttribute("x2", elementB.getAttribute("cx"));
+			line.setAttribute("y2", elementB.getAttribute("cy"));
+			line.setAttribute("stroke", "black");
+			lines.push(line);
+			
+			linegroup.appendChild(line);
+		}
+	}
+}
+function setNodeCount(count){
+	count = Math.max(mincount, count);
+	count = Math.min(maxcount, count);
+	while(networknodes.length < count) createNetworkNode();
+	while(networknodes.length > count) removeNetworkNode();
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+	
+	var addbtn = document.createElement("button");
+	addbtn.textContent = "Add Node";
+	addbtn.addEventListener("click", createNetworkNode);
+	document.body.appendChild(addbtn);
+	
+	var rembtn = document.createElement("button");
+	rembtn.textContent = "Remove Node";
+	rembtn.addEventListener("click", removeNetworkNode);
+	document.body.appendChild(rembtn);
+	
+	var infotext = document.createElement("span");
+	new MutationObserver(function(){
+		localStorage["count"] = networknodes.length;
+		document.querySelector("input[type=number]").value = networknodes.length;
+		infotext.textContent = `Nodes: ${networknodes.length}; Total Connections: ${lines.length}; Connections per node: ${networknodes.length-1}`;
+	}).observe(svg, { subtree: true, childList: true })
+	document.body.appendChild(infotext);
+	
+	var nodecountinput = document.getElementById("nodecountinput");
+	nodecountinput.setAttribute("max", maxcount);
+	nodecountinput.setAttribute("min", mincount);
+	document.getElementById("serverlesscheckbox").checked = serverless = Boolean(Number(localStorage["central"] ?? serverless));
+	setNodeCount(localStorage["count"] ?? 8);
+	document.getElementById("serverlesscheckbox").addEventListener("change", (evt)=>{
+		localStorage['central']=Number(serverless=evt.target.checked);
+		drawLines();
+	});
+	
+	// Add the SVG element to the webpage
+	document.body.appendChild(svg);
+});
+</script>
+</head>
+<body>
+<label for="serverlesscheckbox">Centralized:</label><input id="serverlesscheckbox" checked="true" type="checkbox"></input><br />
+<label for="nodecountinput">Node Count:</label><input id="nodecountinput" type="number" onchange="setNodeCount(this.value)" min="2" max="100"></input><br />
+<noscript>This page requires JavaScript</noscript>
+</body>
+</html>

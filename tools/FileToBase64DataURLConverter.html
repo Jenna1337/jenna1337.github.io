@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+table, tr, td {
+	border: 1px solid black;
+	border-spacing: 0px;
+	/*border-collapse: collapse;*/
+}
+tr, td {
+	height: 100px;
+	position: relative;
+}
+td > * {
+	height: 100px;
+	overflow: auto;
+}
+pre, .scrollcell {
+	height: 100px;
+	overflow: auto;
+	margin: 0px;
+	padding: 5px;
+	max-width: 200px;
+	word-wrap: break-word;
+}
+</style>
+</head>
+<body>
+<noscript>This page requires JavaScript</noscript>
+<button onclick="previewtable.innerHTML=''">Clear output</button>
+<input id="inputfiles" type="file" multiple onchange="previewFiles()"><br>
+<script>
+var previewtable = document.createElement('table');
+document.body.appendChild(previewtable);
+var previewtablebody = document.createElement('tbody');
+document.body.appendChild(previewtable);
+function clearTable(){
+}
+function getpreview(datauri){console.log(arguments);
+	var preview = document.createElement("div");
+	var mediatype = datauri.match(/^data:(.+?)\/(.+?);/);
+	switch(mediatype[1]){
+		case "application":
+			break;
+		case "audio":
+			preview = document.createElement("audio");
+			preview.controls = true;
+			preview.src = datauri;
+			break;
+		case "font":
+			break;
+		case "image":
+			preview = document.createElement("img");
+			preview.src = datauri;
+			break;
+		case "message":
+			break;
+		case "model":
+			break;
+		case "multipart":
+			break;
+		case "text":
+			preview = document.createElement("pre");
+			preview.textContent = atob(datauri.match(/;base64,(.*)/)[1]);
+			break;
+		case "video":
+			preview = document.createElement("video");
+			preview.controls = true;
+			preview.src = datauri;
+			break;
+	}
+	return preview;
+}
+function previewFiles() {
+	var files    = document.getElementById("inputfiles").files;
+	var i=0;
+	(function next(){
+		file = files[i++];console.log(files[i])
+		var reader  = new FileReader();
+		reader.onload=function () {console.log(arguments);
+			var row = document.createElement('tr');
+			var encoded = reader.result;
+			var fname = document.createElement('div');
+			fname.classList.add("scrollcell");
+			fname.textContent=file.name;
+			var fname_wrapper = document.createElement('td');
+			fname_wrapper.appendChild(fname);
+
+			var preview = getpreview(encoded);
+			preview.style="max-width: 100px; max-height: 100px";
+			console.log(encoded);
+			var cell_preview = document.createElement('td');
+			cell_preview.appendChild(preview);
+			cell_preview.style="width: 100px; background-color: white";
+
+			var cell_txt = document.createElement('pre');
+			cell_txt.textContent = encoded;
+			cell_txt.style=" height: 100%; max-width:unset;";
+			var cell_txt_wrapper = document.createElement('td');
+			cell_txt_wrapper.appendChild(cell_txt);
+			cell_txt_wrapper.style="max-width: 1000px; ";
+
+			row.appendChild(fname_wrapper);
+			row.appendChild(cell_preview);
+			row.appendChild(cell_txt_wrapper);
+			previewtable.appendChild(row);
+			next();
+		};
+		if (file)
+			reader.readAsDataURL(file);
+	})();
+}
+</script>
+</body>
+</html>
