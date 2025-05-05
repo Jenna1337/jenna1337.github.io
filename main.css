@@ -50,6 +50,7 @@ body
 	
 	& .MenuButton
 	{
+		text-decoration: none;
 		height: auto;
 		text-align: center;
 		background-color: var(--color-accent1);
@@ -64,7 +65,7 @@ body
 		letter-spacing: 0.25em;
 		z-index: 3;
 	}
-	& .MenuButton, .MenuButton>a
+	& .MenuButton, .MenuButton>*
 	{
 		transition: all 0.1s linear;
 	}
@@ -93,7 +94,7 @@ body
 		color:var(--color-accent2-text);
 		box-shadow: 0px 0px 5px var(--color-accent2);
 	}
-	& .MenuButton>a
+	& .MenuButton>*
 	{
 		color:inherit;
 		text-decoration: none;
@@ -101,11 +102,12 @@ body
 		vertical-align:middle;
 		padding: var(--menu-button-padding);
 		letter-spacing: inherit;
-		display: block;
+		display: inline-block;
+		margin: auto;
 		transform-origin: center center;
 		transform-box: border-box;
 	}
-	& .MenuButton:hover>a{
+	& .MenuButton:hover>*{
 		transform: scale(1.2);
 	}
 }
