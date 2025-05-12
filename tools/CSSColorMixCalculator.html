@@ -5,9 +5,26 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CSS color-mix Calculator</title>
 <style>
+.swatchContainer {
+	--swatchSize: 4em;
+	--swatchPaddingSize: 1ex;
+	position: relative;
+	border: 1px solid gray;
+	height: var(--swatchSize);
+	width: var(--swatchSize);
+}
+.fakebg {
+	height: var(--swatchSize);
+	width: calc(var(--swatchSize) / 2);
+	position: absolute;
+	z-index: 1;
+}
 #resultSwatch {
-	height: 2em;
-	width: 2em;
+	height: calc(var(--swatchSize) - var(--swatchPaddingSize) * 2);
+	width: calc(var(--swatchSize) - var(--swatchPaddingSize) * 2);
+	z-index: 10;
+	position: absolute;
+	inset: var(--swatchPaddingSize);
 }
 </style>
 <script>
@@ -77,6 +94,10 @@ with <option value="$1">$1</option>\n
 <div id="result">
 Result: 
 </div>
+<div class="swatchContainer">
+<div style="background-color: black; left: 0;" class="fakebg"></div>
+<div style="background-color: white; right: 0;" class="fakebg"></div>
 <div id="resultSwatch"></div>
+</div>
 </body>
 </html>
