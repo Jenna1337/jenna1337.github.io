@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CSS color-mix Calculator</title>
+<style>
+#resultSwatch {
+	height: 2em;
+	width: 2em;
+}
+</style>
+<script>
+function colorchanged(event){
+	const color1 = document.getElementById("color1").value;
+	const color2 = document.getElementById("color2").value;
+	const colorSpace = document.getElementById("color-space").value;
+	
+	const resultElem = document.getElementById("result");
+	const resultSwatchElem = document.getElementById("resultSwatch");
+	const colorMixText = "color-mix("
+			+ "in " + colorSpace + ", "
+			+ color1 + ", " + color2 + ")"
+			;
+	resultSwatchElem.style.backgroundColor = colorMixText;
+	const computedColor = window.getComputedStyle(resultSwatchElem).backgroundColor;
+	
+	function convertCssColorDefinitionToHexCode(colorText){
+		const regex = /color\(\s*srgb\s+([0-9.]+)\s+([0-9.]+)\s+([0-9.]+)(?:\s*\/\s*([0-9.]+))?\s*\)/;
+		const match = colorText.match(regex);
+		if (match) {
+			const r = parseFloat(match[1]);
+			const g = parseFloat(match[2]);
+			const b = parseFloat(match[3]);
+			const a = match[4] ? parseFloat(match[4]) : 1;
+			let str = "#" + [r,g,b,a].map(v => Math.round(255*v).toString(16).padStart(2,"0")).join("");
+			str += " ≈ #" + [r,g,b,a].map(v => Math.round(15*v).toString(16).padStart(1,"0")).join("");
+			return str;
+		}
+		else return null;
+	}
+	const hexValue = convertCssColorDefinitionToHexCode(computedColor);
+	resultElem.textContent = "Results: " + colorMixText + " = " + computedColor;
+	if(hexValue != null){
+		resultElem.textContent += " ≈ "+hexValue;
+	}
+}
+</script>
+</head>
+<body onload="colorchanged()">
+<div id="controls">
+color-mix(<label for="color-space">in </label><!--
+From https://drafts.csswg.org/css-color/#interpolation-space
+replace (.+?)(?: \| |\z)
+with <option value="$1">$1</option>\n
+--><select id="color-space" onchange="colorchanged()" autocomplete="off">
+<option value="srgb" selected="">srgb</option>
+<option value="srgb-linear">srgb-linear</option>
+<option value="display-p3">display-p3</option>
+<option value="a98-rgb">a98-rgb</option>
+<option value="prophoto-rgb">prophoto-rgb</option>
+<option value="rec2020">rec2020</option>
+<option value="lab">lab</option>
+<option value="oklab">oklab</option>
+<option value="xyz">xyz</option>
+<option value="xyz-d50">xyz-d50</option>
+<option value="xyz-d65">xyz-d65</option>
+<option value="hsl">hsl</option>
+<option value="hwb">hwb</option>
+<option value="lch">lch</option>
+<option value="oklch">oklch</option>
+</select>
+ <input type="text" id="color1" placeholder="red" oninput="colorchanged()" required="" />
+ <input type="text" id="color2" placeholder="blue" oninput="colorchanged()" required="" />
+)
+</div>
+<div id="result">
+Result: 
+</div>
+<div id="resultSwatch"></div>
+</body>
+</html>
