@@ -27,15 +27,14 @@ function numToUHex(val){
 }
 function GetUnicodeData(codepoint){
 	const placeholder = "undefined";
-	let newVal = {"Name":placeholder,"Category":placeholder};
+	let newVal = {"Name":placeholder};
 	if(UnicodeGlyphNames[codepoint]){
 		newVal.Name = UnicodeGlyphNames[codepoint];
 	}
 	if(UnihanDefs[codepoint]){
 		newVal.Name = UnihanDefs[codepoint];
-		newVal.Category = "Lo";
 	}
-	if(!SUPPRESS_UNKNOWN_CHARS && (newVal.Name === placeholder || newVal.Category === placeholder)){
+	if(!SUPPRESS_UNKNOWN_CHARS && (Object.values(newVal).includes(placeholder))){
 		console.warn("Unknown character data! "+numToUHex(codepoint));
 	}
 	return window.structuredClone(newVal);
@@ -65,6 +64,7 @@ function doProcessing(action){
 }
 window.addEventListener("DOMContentLoaded", function(){
 	const toc = document.getElementById("toc");
+	const blockSelect = document.getElementById("displayedBlocks");
 	
 	const cdat = document.getElementById("chardataraw");
 	window.cdat= cdat;
@@ -112,7 +112,7 @@ window.addEventListener("DOMContentLoaded", function(){
 		tocLabelLink.textContent = fullBlockLabelText;
 		toc.appendChild(tocLabelLink);
 		
-		const contlabel = document.createElement("div");
+		const contlabel = document.createElement("h3");
 		contlabel.className = "charboxcontainerlabel";
 		{
 			const contlabel_anchor = document.createElement("a");
@@ -127,6 +127,12 @@ window.addEventListener("DOMContentLoaded", function(){
 		cont.className = "charboxcontainer";
 		cont.innerHTML += bdat[1];
 		cdat.appendChild(cont);
+		
+		//TODO change this to a drop-down list with checkboxes
+		const blockOption = document.createElement("option");
+		blockOption.value = blockName;
+		blockOption.textContent = blockName;
+		blockSelect.appendChild(blockOption);
 	});
 	cdat.id = "chardata";
 	cdat.style.display = "";
@@ -243,12 +249,16 @@ body.busy, body.busy * {
 <div id="viewOptions">
 <a class="gotoTop" href="#top" title="Go to top of document"><span class="arrow">&uarr; </span>Go to top of document</a>
 <label for="charRenderFontSizeScale">Character Render Font Size Scale<input type="range" id="charRenderFontSizeScale" min="25" max="1000" step="25" value="100"></input> <span class="value">%</label>
+<label for="displayedBlocks">Displayed Blocks<select id="displayedBlocks" multiple="">
+</select></label>
 </div>
 </div>
+<h1>Font Test</h1>
+<h2>Table of Contents</h2>
 <div id="toc">
 Blocks:
 </div>
-Characters:
+<h2>Characters</h2>
 <div id="chardataraw" style="display: none">
 <ch h="&#x0000;" c="0"></ch>
 <ch h="&#x0001;" c="1"></ch>
