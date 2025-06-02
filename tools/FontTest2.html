@@ -110,6 +110,13 @@ window.addEventListener("DOMContentLoaded", function(){
 	blockOrder.map(a=>[a,cdatInBlocks[a].join("\n")]).forEach(bdat=>{
 		const tocLabelLink = document.createElement("a");
 		const blockName = bdat[0];
+		let blockVisible = !blockName.match(/UnknownBlock\d+/);
+		if(localStorage){
+			const storedVal = localStorage[VisibilityToggleBlockStorageUidStart + blockName];
+			if(storedVal != null){
+				blockVisible = storedVal == "true" ? true : false;
+			}
+		}
 		let blockRange = UnicodeBlocks.find(a=>a[1]===bdat[0])?.[0];
 		const blockRangeString = blockRange ? `[${numToUHex(blockRange[0])} to ${numToUHex(blockRange[1])}] ` : (()=>{
 			const matches = bdat[1].match(/U\+[A-Fa-f0-9]{4,}/g);
@@ -122,7 +129,6 @@ window.addEventListener("DOMContentLoaded", function(){
 		
 		const contlabel = document.createElement("h3");
 		contlabel.className = "charboxcontainerlabel";
-		contlabel.dataset.blockName = blockName;
 		{
 			const contlabel_anchor = document.createElement("a");
 			contlabel_anchor.href = "#"+blockName;
@@ -130,19 +136,25 @@ window.addEventListener("DOMContentLoaded", function(){
 			contlabel_anchor.textContent = fullBlockLabelText;
 			contlabel.appendChild(contlabel_anchor);
 		}
-		cdat.appendChild(contlabel);
+		const contcont = document.createElement("div");
+		contcont.className = "charboxcontainercontainer";
+		contcont.dataset.blockName = blockName;
+		contcont.appendChild(contlabel);
 		
 		const cont = document.createElement("div");
 		cont.className = "charboxcontainer";
-		cont.dataset.blockName = blockName;
 		cont.innerHTML += bdat[1];
-		cdat.appendChild(cont);
+		contcont.appendChild(cont);
+		if(!blockVisible){
+			contcont.style.display = "none";
+		}
+		cdat.appendChild(contcont);
 		
 		{
 			const blockOption = document.createElement("option");
 			blockOption.value = blockName;
 			blockOption.textContent = blockName;
-			blockOption.selected = true;
+			blockOption.selected = blockVisible;
 			blockSelectSelect.appendChild(blockOption);
 		}
 		{
@@ -150,7 +162,7 @@ window.addEventListener("DOMContentLoaded", function(){
 			const blockOption = document.createElement("input");
 			const blockOptionLabel = document.createElement("label");
 			const blockOptionGroup = document.createElement("li");
-			blockOption.checked = true;
+			blockOption.checked = blockVisible;
 			blockOption.id = blockOptionId;
 			blockOption.setAttribute("type", "checkbox");
 			blockOption.dataset.blockName = blockName;
@@ -165,7 +177,14 @@ window.addEventListener("DOMContentLoaded", function(){
 	cdat.id = "chardata";
 	cdat.style.display = "";
 });
+const VisibilityToggleBlockStorageUidStart = "BlockToggleVis-";
+const onBlockOptionChange = (name, isSelected)=>{
+	if(localStorage){
+		localStorage[VisibilityToggleBlockStorageUidStart + name] = isSelected ? "true" : "false";
+	}
+}
 const blockOptionChangeHandler = (event)=>{
+	onBlockOptionChange(event.target.dataset.blockName, event.target.checked);
 	document.getElementById("chardata")
 			.querySelectorAll("[data-block-name=\""+event.target.dataset.blockName+"\"]")
 			.forEach(a=>a.style.display = event.target.checked ? "" : "none");
@@ -174,6 +193,7 @@ const setDisplayedBlocksSelect = (target)=>{
 	console.log(target);
 	const base = document.getElementById("chardata");
 	target.childNodes.forEach(option=>{
+		onBlockOptionChange(option.value, option.selected);
 		const displayStr = option.selected ? "" : "none";
 		base.querySelectorAll("[data-block-name=\""+option.value+"\"]")
 			.forEach(a=>a.style.display = displayStr);
@@ -212,28 +232,39 @@ window.addEventListener("DOMContentLoaded", function(){
 <style>
 body {
 	margin: 0.3rem;
+	font-variant: text;
 }
 body.busy, body.busy * {
 	cursor: wait !important;
 }
-.charboxcontainerlabel {
-	margin-block-start: 1rem;
-	margin-block-end: 0.1rem;
-	margin-inline: 0.3rem;
-	font-weight: bolder;
-	font-size: larger;
-}
-.charboxcontainer {
-	margin-inline: 0.3rem;
-	display: grid;
-	grid-template-columns: repeat(16, 1fr);
-	width: fit-content;
-	font-size: var(--charrenderfontsize);
-	
-	& charbox {
-		outline: 1px solid currentColor; 
-		min-width: 1em;
-		text-align: center;
+.charboxcontainercontainer {
+	.charboxcontainerlabel {
+		margin-block-start: 1rem;
+		margin-block-end: 0.1rem;
+		margin-inline: 0.3rem;
+		font-weight: bolder;
+		font-size: larger;
+	}
+	.charboxcontainer {
+		margin-inline: 0.3rem;
+		display: grid;
+		grid-template-columns: repeat(16, 1fr);
+		width: fit-content;
+		font-size: var(--charrenderfontsize);
+		
+		& charbox {
+			outline: 1px solid currentColor;
+			/*set min-width for combining marks*/
+			min-width: 1em;
+			text-align: center;
+			min-height: 1lh;
+			display: block;
+			
+			span {
+				vertical-align: top;
+				line-height: 1lh;
+			}
+		}
 	}
 }
 .sticky {
