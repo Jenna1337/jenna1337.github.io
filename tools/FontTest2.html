@@ -62,9 +62,17 @@ function doProcessing(action){
 	});
 	});
 }
+const USE_SELECT_OPTION_LIST = !Boolean(navigator?.userAgent?.match(/\bMobile\b/i));
 window.addEventListener("DOMContentLoaded", function(){
 	const toc = document.getElementById("toc");
-	const blockSelect = document.getElementById("displayedBlocks");
+	const blockSelectList = document.getElementById("displayedBlocks");
+	const blockSelectSelect = document.getElementById("displayedBlocksSelect");
+	
+	if(USE_SELECT_OPTION_LIST){
+		document.getElementById("displayedBlocks").style.display = "none";
+	}else{
+		document.getElementById("displayedBlocksSelect").style.display = "none";
+	}
 	
 	const cdat = document.getElementById("chardataraw");
 	window.cdat= cdat;
@@ -114,6 +122,7 @@ window.addEventListener("DOMContentLoaded", function(){
 		
 		const contlabel = document.createElement("h3");
 		contlabel.className = "charboxcontainerlabel";
+		contlabel.dataset.blockName = blockName;
 		{
 			const contlabel_anchor = document.createElement("a");
 			contlabel_anchor.href = "#"+blockName;
@@ -125,18 +134,51 @@ window.addEventListener("DOMContentLoaded", function(){
 		
 		const cont = document.createElement("div");
 		cont.className = "charboxcontainer";
+		cont.dataset.blockName = blockName;
 		cont.innerHTML += bdat[1];
 		cdat.appendChild(cont);
 		
-		//TODO change this to a drop-down list with checkboxes
-		const blockOption = document.createElement("option");
-		blockOption.value = blockName;
-		blockOption.textContent = blockName;
-		blockSelect.appendChild(blockOption);
+		{
+			const blockOption = document.createElement("option");
+			blockOption.value = blockName;
+			blockOption.textContent = blockName;
+			blockOption.selected = true;
+			blockSelectSelect.appendChild(blockOption);
+		}
+		{
+			const blockOptionId = "VisibilityToggleButton-"+blockName;
+			const blockOption = document.createElement("input");
+			const blockOptionLabel = document.createElement("label");
+			const blockOptionGroup = document.createElement("li");
+			blockOption.checked = true;
+			blockOption.id = blockOptionId;
+			blockOption.setAttribute("type", "checkbox");
+			blockOption.dataset.blockName = blockName;
+			blockOption.addEventListener("change", blockOptionChangeHandler);
+			blockOptionLabel.setAttribute("for", blockOptionId);
+			blockOptionLabel.textContent = blockName;
+			blockOptionGroup.appendChild(blockOption);
+			blockOptionGroup.appendChild(blockOptionLabel);
+			blockSelectList.appendChild(blockOptionGroup);
+		}
 	});
 	cdat.id = "chardata";
 	cdat.style.display = "";
 });
+const blockOptionChangeHandler = (event)=>{
+	document.getElementById("chardata")
+			.querySelectorAll("[data-block-name=\""+event.target.dataset.blockName+"\"]")
+			.forEach(a=>a.style.display = event.target.checked ? "" : "none");
+}
+const setDisplayedBlocksSelect = (target)=>{
+	console.log(target);
+	const base = document.getElementById("chardata");
+	target.childNodes.forEach(option=>{
+		const displayStr = option.selected ? "" : "none";
+		base.querySelectorAll("[data-block-name=\""+option.value+"\"]")
+			.forEach(a=>a.style.display = displayStr);
+	});
+}
 window.addEventListener("DOMContentLoaded", function(){
 	const charRenderFontSizeScaleElem = document.getElementById("charRenderFontSizeScale");
 	charRenderFontSizeScaleElem.addEventListener("change", (event)=>{
@@ -157,6 +199,14 @@ window.addEventListener("DOMContentLoaded", function(){
 		}
 	});
 	charRenderFontSizeScaleElem.dispatchEvent(new Event("change"));
+	
+	const displayBlocksOptionList = document.getElementById("displayBlocksOptionList");
+	document.body.addEventListener("focusin", (event)=>{
+		if(!event.target.closest("#"+displayBlocksOptionList.id))
+		{
+			displayBlocksOptionList.removeAttribute("open");
+		}
+	});
 });
 </script>
 <style>
@@ -194,29 +244,63 @@ body.busy, body.busy * {
 	left: 0;
 	right: 0;
 	#viewOptions {
-		padding: 1.5em;
+		padding-block-start: 1rem;
+		padding-block-end: 0.5rem;
+		padding-inline: 0.2rem;
 		transition: top 1s linear;
 		width: fit-content;
 		--bgcolor: color-mix(in srgb, Canvas 90%, transparent 10%);
 		background-color: var(--bgcolor);
-		padding-block-end: 0.5em;
 		
 		& input[type="range"] {
 			vertical-align: middle;
 		}
 		.gotoTop {
 			text-decoration: none;
-			margin-block-start: -0.5rem;
-			margin-inline-start: -1.3rem;
 			margin-inline-end: 0.8rem;
-			padding: 0.5em;
+			padding: 0.5rem;
 			background-color: var(--bgcolor);
 			border: 1px solid CanvasText;
-			vertical-align: top;
 			display: inline-block;
 		}
 		.gotoTop:hover {
 			background-color: color-mix(in srgb, var(--bgcolor) 95%, CanvasText 5%);
+		}
+	}
+	details {
+		width: 20em;
+		margin: 0.3rem;
+		position: relative;
+		display: inline-block;
+		--border-width: 1px;
+		border: var(--border-width) solid currentColor;
+		border-radius: 0.2em;
+		padding-inline: 0.2rem;
+		--padding-block: 0.2rem;
+		padding-block: var(--padding-block);
+		
+		--lineheight: 1lh;
+		
+		summary {
+			/*line-height: var(--lineheight);*/
+		}
+		#displayedBlocks, #displayedBlocksSelect {
+			min-height: 10rlh;
+			max-height: 50vh;
+			overflow: auto;
+			width: inherit;
+			margin: 0;
+			position: absolute;
+			border: 1px solid currentColor;
+			top: calc(var(--lineheight) + 2 * var(--padding-block) + 2 * var(--border-width));
+			background-color: color-mix(in srgb, Canvas 98%, transparent 2%);
+			right: 0;
+			left: 0;
+			list-style: decimal;
+			
+			option {
+				padding-block: 0;
+			}
 		}
 	}
 }
@@ -248,9 +332,10 @@ body.busy, body.busy * {
 <div class="sticky">
 <div id="viewOptions">
 <a class="gotoTop" href="#top" title="Go to top of document"><span class="arrow">&uarr; </span>Go to top of document</a>
-<label for="charRenderFontSizeScale">Character Render Font Size Scale<input type="range" id="charRenderFontSizeScale" min="25" max="1000" step="25" value="100"></input> <span class="value">%</label>
-<label for="displayedBlocks">Displayed Blocks<select id="displayedBlocks" multiple="">
-</select></label>
+<label for="charRenderFontSizeScale" style="white-space: nowrap;">Character Render Font Size Scale<input type="range" id="charRenderFontSizeScale" min="25" max="1000" step="25" value="100"></input> <span class="value">%</label>
+<details id="displayBlocksOptionList"><summary>Displayed Blocks</summary>
+<ol id="displayedBlocks"></ol><select id="displayedBlocksSelect" multiple="" onchange="setDisplayedBlocksSelect(this)"></select>
+</details>
 </div>
 </div>
 <h1>Font Test</h1>
