@@ -156,8 +156,8 @@ window.addEventListener("DOMContentLoaded", function(){
 			blockOption.dataset.blockName = blockName;
 			blockOption.addEventListener("change", blockOptionChangeHandler);
 			blockOptionLabel.setAttribute("for", blockOptionId);
-			blockOptionLabel.textContent = blockName;
-			blockOptionGroup.appendChild(blockOption);
+			blockOptionLabel.appendChild(blockOption);
+			blockOptionLabel.append(blockName);
 			blockOptionGroup.appendChild(blockOptionLabel);
 			blockSelectList.appendChild(blockOptionGroup);
 		}
@@ -300,6 +300,22 @@ body.busy, body.busy * {
 			
 			option {
 				padding-block: 0;
+			}
+			li {
+				--hover-color: blue;
+				--active-color: red;
+				label {
+					width: 100%;
+					display: block;
+				}
+				:hover {
+					background-color: color-mix(in srgb, var(--hover-color) 10%, transparent);
+					outline: 1px solid color-mix(in srgb, var(--hover-color) 20%, transparent);
+				}
+				:active {
+					background-color: color-mix(in srgb, var(--active-color) 10%, transparent);
+					outline: 1px solid color-mix(in srgb, var(--active-color) 20%, transparent);
+				}
 			}
 		}
 	}
