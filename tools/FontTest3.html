@@ -231,6 +231,10 @@ window.addEventListener("DOMContentLoaded", function(){
 });
 </script>
 <style>
+:root {
+				scroll-padding-top: 4lh;
+
+}
 body {
 	margin: 0.3rem;
 	font-variant: text;
@@ -238,57 +242,99 @@ body {
 body.busy, body.busy * {
 	cursor: wait !important;
 }
-.charboxcontainercontainer {
-	z-index: 1;
-	.charboxcontainerlabel {
-		margin-block-start: 1rem;
-		margin-block-end: 0.1rem;
-		margin-inline: 0.3rem;
-		font-weight: bolder;
-		font-size: larger;
-	}
-	.charboxcontainer {
-		margin-inline: 0.3rem;
+#chardata {
+	--charbox-grid-gap: 0.25lh;
+	--charbox-col-count: 16;
+	--charboxcont-margin-inline: 0.3rem;
+	
+	@supports (grid-template-rows: masonry) {
 		display: grid;
-		grid-template-columns: repeat(16, 1fr);
-		grid-gap: 0.25lh;
+		grid-template-rows: masonry;
+		grid-template-columns: repeat(auto-fit, calc(
+				calc(var(--charbox-col-count) * 1lh)
+				+ calc(2 * var(--charboxcont-margin-inline))
+				+ calc(
+					var(--charbox-grid-gap)
+						* calc(var(--charbox-col-count) - 1)
+				)
+			)
+		);
+	}
+	font-size: var(--charrenderfontsize);
+	
+	.charboxcontainercontainer {
+		margin-block-start: 1rem;
+		z-index: 1;
 		width: fit-content;
-		font-size: var(--charrenderfontsize);
-		user-select: none;
 		
-		& charbox {
-			outline: 1px solid currentColor;
-			/*set min-width for combining marks*/
-			text-align: left;
-			display: block;
-			position: relative;
-			width: 1lh;
-			height: 1lh;
-			aspect-ratio: 1 / 1;
+		.charboxcontainerlabel {
+			margin-block-start: 0;
+			margin-block-end: 0.1rem;
+			margin-inline: 0.3rem;
+			font-weight: bolder;
+			font-size: 1.2rem !important;
+		}
+		.charboxcontainer {
+			margin-inline: var(--charboxcont-margin-inline);
+			display: grid;
+			grid-template-columns: repeat(var(--charbox-col-count), 1fr);
+			grid-gap: var(--charbox-grid-gap);
+			width: fit-content;
+			user-select: none;
 			
-			svg {
-				z-index: 3;
-				position: absolute;
-				top: 0;
-				left: 0;
+			& charbox {
+				outline: 1px solid currentColor;
+				/*set min-width for combining marks*/
+				text-align: left;
+				display: block;
+				position: relative;
+				width: 1lh;
+				height: 1lh;
 				aspect-ratio: 1 / 1;
-			}
-			div {
-				z-index: 2;
-				vertical-align: top;
-				display: inline-block;
 				
-				span {
-					outline: 2px solid #F00D;
-					line-height: 1lh;
+				svg {
+					z-index: 3;
+					position: absolute;
+					top: 0;
+					left: 0;
+					aspect-ratio: 1 / 1;
+				}
+				div {
+					z-index: 2;
+					vertical-align: top;
+					display: inline-block;
+					
+					span {
+						outline: 2px solid #F00D;
+						line-height: 1lh;
+					}
+				}
+			}
+			& charbox[title*="Combining" i] {
+				div span {
+					margin-inline-start: 0.5lh;
 				}
 			}
 		}
-		& charbox[title*="Combining" i] {
-			div span {
-				margin-inline-start: 0.5lh;
-			}
+	}
+	.charboxcontainercontainer:has(:target) {
+		animation-name: blink;
+		animation-direction: normal;
+		animation-duration: 2s;
+		animation-iteration-count: 1;
+		animation-timing-function: linear;
+		.charboxcontainer {
+			outline: 3px solid #FF08;
+			outline-offset: 2px;
 		}
+	}
+}
+@keyframes blink {
+	0% {
+		outline:5px solid highlight
+	}
+	100% {
+		outline:0px solid transparent
 	}
 }
 .sticky {
