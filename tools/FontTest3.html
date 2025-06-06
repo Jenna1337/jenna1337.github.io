@@ -62,6 +62,8 @@ function doProcessing(action){
 	});
 	});
 }
+const ExcludeBlocks = /Enclosed|UnknownBlock|Surrogate|Private Use|Variation Selectors/i;
+const UncommonBlocks = /\b(?:Yi|Box|Block|Number Forms|Braille|Samaritan|Kayah Li|Phags-pa|Syloti Nagri|Rejang|Saurashtra|Arabic|Bengali|Glagolitic|Kanbun|Tagbanwa|Yijing Hexagram|Vedic|Cherokee|Ogham|Optical|Armenian|Devanagari|Gujarati|Aboriginal|Tagalog|Hanunoo|Runic|Ol Chiki|Gurmukhi|Tibetan|Syriac|Hebrew|NKo|Thaana|Mandaic|Kannada|Malayalam|Tamil|Telugu|Sinhala|Oriya|Thai|Lao|Ethiopic|Buhid|Mongolian|Limbu|Khmer|Buginese|Balinese|Batak|Georgian|Sundanese|Lepcha|Tifinagh|Lisu|Vai|Bamum|Myanmar|Cham|Javanese|Meetei|Mayek|Tai)\b/i;
 const USE_SELECT_OPTION_LIST = Boolean(navigator?.userAgent?.match(/\bMobile\b/i));
 window.addEventListener("DOMContentLoaded", function(){
 	const toc = document.getElementById("toc");
@@ -112,7 +114,7 @@ window.addEventListener("DOMContentLoaded", function(){
 	blockOrder.map(a=>[a,cdatInBlocks[a].join("\n")]).forEach(bdat=>{
 		const tocLabelLink = document.createElement("a");
 		const blockName = bdat[0];
-		let blockVisible = !blockName.match(/UnknownBlock|Surrogate|Private Use/);
+		let blockVisible = !blockName.match(ExcludeBlocks) && (!UncommonBlocks || !blockName.match(UncommonBlocks));
 		if(localStorage){
 			const storedVal = localStorage[VisibilityToggleBlockStorageUidStart + blockName];
 			if(storedVal != null){
@@ -127,6 +129,7 @@ window.addEventListener("DOMContentLoaded", function(){
 		const fullBlockLabelText = blockRangeString + blockName;
 		tocLabelLink.href = "#"+blockName;
 		tocLabelLink.textContent = fullBlockLabelText;
+		tocLabelLink.dataset.blockName = blockName;
 		toc.appendChild(tocLabelLink);
 		
 		const contlabel = document.createElement("h3");
@@ -148,6 +151,7 @@ window.addEventListener("DOMContentLoaded", function(){
 		cont.innerHTML += bdat[1];
 		contcont.appendChild(cont);
 		if(!blockVisible){
+			tocLabelLink.style.display = "none";
 			contcont.style.display = "none";
 		}
 		cdat.appendChild(contcont);
@@ -180,24 +184,21 @@ window.addEventListener("DOMContentLoaded", function(){
 	cdat.style.display = "";
 });
 const VisibilityToggleBlockStorageUidStart = "BlockToggleVis-";
-const onBlockOptionChange = (name, isSelected)=>{
+const onBlockOptionChange = (blockName, isSelected)=>{
 	if(localStorage){
-		localStorage[VisibilityToggleBlockStorageUidStart + name] = isSelected ? "true" : "false";
+		localStorage[VisibilityToggleBlockStorageUidStart + blockName] = isSelected ? "true" : "false";
 	}
+	const displayStr = isSelected ? "" : "none";
+	document.body
+			.querySelectorAll(":not(input)[data-block-name=\""+blockName+"\"]")
+			.forEach(a=>a.style.display = displayStr);
 }
 const blockOptionChangeHandler = (event)=>{
 	onBlockOptionChange(event.target.dataset.blockName, event.target.checked);
-	document.getElementById("chardata")
-			.querySelectorAll("[data-block-name=\""+event.target.dataset.blockName+"\"]")
-			.forEach(a=>a.style.display = event.target.checked ? "" : "none");
 }
 const setDisplayedBlocksSelect = (event)=>{
-	const base = document.getElementById("chardata");
 	event.target.childNodes.forEach(option=>{
 		onBlockOptionChange(option.value, option.selected);
-		const displayStr = option.selected ? "" : "none";
-		base.querySelectorAll("[data-block-name=\""+option.value+"\"]")
-			.forEach(a=>a.style.display = displayStr);
 	});
 }
 window.addEventListener("DOMContentLoaded", function(){
@@ -232,10 +233,12 @@ window.addEventListener("DOMContentLoaded", function(){
 </script>
 <style>
 :root {
-				scroll-padding-top: 4lh;
-
+	scroll-padding-top: 4lh;
+	font-family: sans-serif;
+	container-type: inline-size;
 }
 body {
+	--scrollbar: calc(100vw - 100cqw);
 	margin: 0.3rem;
 	font-variant: text;
 }
@@ -431,6 +434,7 @@ body.busy, body.busy * {
 	border: 0.3rem ridge currentColor;
 	padding: 0.3rem;
 	margin: 0.3rem;
+	text-indent: 1lh hanging each-line;
 	
 	& a {
 		display: list-item;
