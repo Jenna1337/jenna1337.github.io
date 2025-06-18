@@ -69,7 +69,7 @@ window.addEventListener("DOMContentLoaded", function(){
 			blockOrder.push(b);
 		}
 		cdatInBlocks[b] ??= [];
-		const charboxHTML = `<charbox title="${b}\n${u?.Name}\n${c}\t${n}"><svg viewBox="0 0 100 100"><path d="${d}" /></svg><div><span>${h}</span></div></charbox>`;
+		const charboxHTML = `<charbox title="${b}\n${u?.Name}\n${c}\t${n}"><svg viewBox="0 0 100 100"><path d="${d ?? ''}" /></svg><div><span>${h}</span></div></charbox>`;
 		cdatInBlocks[b].push(charboxHTML);
 	});
 	cdat.innerHTML = "";
@@ -198,11 +198,23 @@ window.addEventListener("DOMContentLoaded", function(){
 	scroll-padding-top: 4lh;
 	font-family: sans-serif;
 	container-type: inline-size;
+	
+	--sticky-padding-block-start: 1rem;
+	--sticky-padding-block-end: 0.5rem;
+	--sticky-gotoTop-padding-block: 0.5rem;
+	--sticky-total-padding-block: calc(var(--sticky-padding-block-start) + var(--sticky-padding-block-end) + var(--sticky-gotoTop-padding-block) * 2);
+	--sticky-total-height: calc(1lh + var(--sticky-total-padding-block) + 2px);
 }
 body {
 	--scrollbar: calc(100vw - 100cqw);
+	--body-margin: 0.3rem;
 	margin: 0.3rem;
 	font-variant: text;
+	width: max-content;
+	min-width: calc(100% - var(--body-margin));
+}
+body.fixedSticky {
+	padding-block-start: var(--sticky-total-height);
 }
 body.busy, body.busy * {
 	cursor: wait !important;
@@ -211,17 +223,20 @@ body.busy, body.busy * {
 	--charbox-grid-gap: 0.25lh;
 	--charbox-col-count: 16;
 	--charboxcont-margin-inline: 0.3rem;
+	--charboxcontainer-width: calc(
+			calc(var(--charbox-col-count) * 1lh)
+			+ calc(
+				var(--charbox-grid-gap)
+					* calc(var(--charbox-col-count) - 1)
+			)
+	);
 	
 	@supports (grid-template-rows: masonry) {
 		display: grid;
 		grid-template-rows: masonry;
 		grid-template-columns: repeat(auto-fit, calc(
-				calc(var(--charbox-col-count) * 1lh)
+				calc(var(--charboxcontainer-width))
 				+ calc(2 * var(--charboxcont-margin-inline))
-				+ calc(
-					var(--charbox-grid-gap)
-						* calc(var(--charbox-col-count) - 1)
-				)
 			)
 		);
 	}
@@ -245,6 +260,7 @@ body.busy, body.busy * {
 			grid-template-columns: repeat(var(--charbox-col-count), 1fr);
 			grid-gap: var(--charbox-grid-gap);
 			width: fit-content;
+			width: var(--charboxcontainer-width);
 			user-select: none;
 			
 			& charbox {
@@ -308,21 +324,26 @@ body.busy, body.busy * {
 		outline:0px solid transparent
 	}
 }
+.fixedSticky {
+	.sticky {
+		position: fixed !important;
+		height: var(--sticky-total-height);
+	}
+}
 .sticky {
 	position: sticky;
 	top: 0;
-	container-type: scroll-state;
-	container-name: sticky-heading;
 	left: 0;
 	right: 0;
 	z-index: 100;
+	width: max-content;
 	
 	#viewOptions {
-		padding-block-start: 1rem;
-		padding-block-end: 0.5rem;
+		padding-block-start: var(--sticky-padding-block-start);
+		padding-block-end: var(--sticky-padding-block-end);
 		padding-inline: 0.2rem;
 		transition: top 1s linear;
-		width: fit-content;
+		width: max-content;
 		--bgcolor: color-mix(in srgb, Canvas 90%, transparent 10%);
 		background-color: var(--bgcolor);
 		
@@ -332,7 +353,7 @@ body.busy, body.busy * {
 		.gotoTop {
 			text-decoration: none;
 			margin-inline-end: 0.8rem;
-			padding: 0.5rem;
+			padding: var(--sticky-gotoTop-padding-block);
 			background-color: var(--bgcolor);
 			border: 1px solid CanvasText;
 			display: inline-block;
@@ -408,12 +429,6 @@ body.busy, body.busy * {
 		display: list-item;
 		margin-inline-start: 2em;
 		width: fit-content;
-	}
-}
-@container sticky-heading scroll-state(stuck: top) {
-	#viewOptions {
-		background-color: red;
-		top: 0.5em;
 	}
 }
 </style>
