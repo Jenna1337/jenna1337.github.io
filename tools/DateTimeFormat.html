@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+<meta charset="UTF-8">
+<title>Date Time Format</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+
+</style>
+<script>
+//see https://learn.microsoft.com/en-us/dotnet/standard/base-types/custom-date-and-time-format-strings
+
+const dayNamesAbbr = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const monthNamesAbbr = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const monthNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+const ifNotZero = (str)=>{
+	return Number(str)==0 ? str : "";
+};
+const getSecondParts = (d,len,extraZeros = true)=>{
+	const maxLen = 3;
+	let main = d.getMilliseconds().toString().padStart(3, "0");
+	if(len < main.length)
+	{
+		main = main.slice(0, len);
+	}
+	if(len > main.length && extraZeros){
+		main = main.padEnd(len, "0");
+	}
+	if(!extraZeros){
+		//strip trailing zeros
+		main = main.replace(/0+$/,"");
+	}
+	return main;
+};
+const amPm = (d)=>{
+	const isPm = d.getHours() >= 12;
+	return isPm ? "PM" : "AM";
+};
+const tz = (d, format, padstart = true)=>{
+	let offset = d.getTimezoneOffset();
+	const sgn = offset < 0 ? "-" : "+";
+	offset = Math.abs(offset);
+	let hrs = Math.floor(offset/60).toString();
+	let mns = (offset%60).toString().padStart(2, "0");
+	if(padstart){
+		hrs = hrs.padStart(2, "0");
+	}
+	let result = sgn + hrs;
+	
+	if(format > 2){
+		result += ":";
+	}
+	result += mns;
+	return result;
+};
+const era = (d, dots = false, newStyle = false)=>{
+	const isAD = d.getFullYear()>=0;
+	let result;
+	
+	if(newStyle){
+		result = isAD ? "CE" : "BCE";
+	}
+	else{
+		result = isAD ? "AD" : "BC";
+	}
+	if(dots){
+		result = result.replaceAll(/(.)/g,"$1.");
+	}
+	return result;
+}
+const formatMap = {
+	
+	//day
+	"d": (d)=>d.getDate().toString(),
+	"dd": (d)=>d.getDate().toString().padStart(2, "0"),
+	"ddd": (d)=>dayNamesAbbr[d.getDay()],
+	"dddd": (d)=>dayNames[d.getDay()],
+	
+	//second parts
+	"f":(d)=>getSecondParts(d,1),
+	"ff":(d)=>getSecondParts(d,2),
+	"fff":(d)=>getSecondParts(d,3),
+	"SSS":(d)=>getSecondParts(d,3),//from Java's SimpleDateFormat
+	"ffff":(d)=>getSecondParts(d,4),
+	"fffff":(d)=>getSecondParts(d,5),
+	"ffffff":(d)=>getSecondParts(d,6),
+	"fffffff":(d)=>getSecondParts(d,7),
+	//second parts no trailing zeros
+	"F":(d)=>getSecondParts(d,1, false),
+	"FF":(d)=>getSecondParts(d,2, false),
+	"FFF":(d)=>getSecondParts(d,3, false),
+	"FFFF":(d)=>getSecondParts(d,4, false),
+	"FFFFF":(d)=>getSecondParts(d,5, false),
+	"FFFFFF":(d)=>getSecondParts(d,6, false),
+	"FFFFFFF":(d)=>getSecondParts(d,7, false),
+	
+	//era
+	"g":(d)=>era(d,true),
+	"gg":(d)=>era(d,true),
+	"ggg":(d)=>era(d,true,true),
+	"G":(d)=>era(d),
+	"GG":(d)=>era(d),
+	"GGG":(d)=>era(d,false,true),
+	
+	//hour
+	"h":(d)=>((d.getHours()-1)%12+1).toString(),
+	"hh":(d)=>((d.getHours()-1)%12+1).toString().padStart(2, "0"),
+	"H":(d)=>d.getHours().toString(),
+	"HH":(d)=>d.getHours().toString().padStart(2, "0"),
+	
+	//"K"//TODO
+	
+	//minutes
+	"m":(d)=>d.getMinutes().toString(),
+	"mm":(d)=>d.getMinutes().toString().padStart(2, "0"),
+	
+	//month
+	"M":(d)=>d.getMonth().toString(),
+	"MM":(d)=>d.getMonth().toString().padStart(2, "0"),
+	"MMM":(d)=>monthNamesAbbr[d.getMonth()-1],
+	"MMMM":(d)=>monthNames[d.getMonth()-1],
+	
+	//seconds
+	"s":(d)=>d.getSeconds().toString(),
+	"ss":(d)=>d.getSeconds().toString().padStart(2, "0"),
+	
+	//AM/PM
+	"t":amPm,
+	"tt":amPm,
+	"a":amPm,
+	"aa":amPm,
+	"aaa":amPm,
+	
+	//year
+	"y":(d)=>(d.getFullYear()%100).toString(),
+	"yy":(d)=>(d.getFullYear()%100).toString().padStart(2, "0"),
+	"yyy":(d)=>d.getFullYear().toString().padStart(3, "0"),
+	"yyyy":(d)=>d.getFullYear().toString().padStart(4, "0"),
+	"yyyyy":(d)=>d.getFullYear().toString().padStart(5, "0"),
+	
+	//time zone
+	"X":(d)=>tz(d,1),
+	"XX":(d)=>tz(d,2),
+	"XXX":(d)=>tz(d,3),
+	"z":(d)=>tz(d,1,false),
+	"zz":(d)=>tz(d,1),
+	"zzz":(d)=>tz(d,3),
+	"zzzz":(d)=>tz(d,3),
+	"Z":(d)=>tz(d,2),
+};
+var reg = new RegExp("'(?:\\.|[^'])*'|("+Object.keys(formatMap).sort((a, b) => b.length - a.length).join("|")+")", "g")
+function formatDateString(d, format){
+	//TODO
+	return format.replaceAll(reg, (match)=>{
+		if(match.startsWith("'") && match.endsWith("'")){
+			return match.slice(1,-1);
+		}
+		return formatMap[match](d);
+	});
+}
+document.addEventListener("DOMContentLoaded", ()=>{
+	const d=new Date();
+	document.getElementById("test1").textContent = Object.entries(formatMap).map(a=>a[0]+" => "+a[1](d)).join("\n");
+	
+	[...document.getElementsByClassName("datetimestamp")].forEach(a=>a.textContent=formatDateString(d, a.dataset.dateTimeFormat));
+});
+
+
+//TODO look into https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/DateTimeFormat
+
+</script>
+</head>
+<body>
+<pre>
+Local format test 1: <span class="datetimestamp" data-date-time-format="ddd MMM dd, yyyy hh:mm:ss tt 'GMT'XXX ggg"></span>
+Local format test 2: <span class="datetimestamp" data-date-time-format="dddd MMMM dd, yyyy 'at' hh:mm:ss aaa 'UTC'zz GG"></span>
+IMF-fixdate (HTTP): <span class="datetimestamp" data-date-time-format="ddd, dd MMM yyyy HH:mm:ss 'GMT'"></span>
+ISO 8601: <span class="datetimestamp" data-date-time-format="yyyy-MM-dd'T'HH:mm:ss.SSSZ"></span>
+</pre>
+<pre id="test1"></pre>
+</body>
+</html>
