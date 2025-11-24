@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+<meta charset="UTF-8" />
+<meta name="description" content="" />
+<meta name="keywords" content="juzcook" />
+<meta name="author" content="Jenna Sloan" />
+<title>juzcook, when's the next stream?</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+body {
+	font-family: "docs-Nunito", sans-serif;
+}
+#config {
+	position: sticky;
+	top: 0;
+	background-color: #FFFE;
+	margin-block-end: 1lh;
+}
+#table {
+	border-collapse: collapse;
+	thead > *{
+		background-color: rgb(201, 218, 248);
+	}
+	margin-block-start: 1lh;
+}
+.scheduleDay > *{
+	display: table-cell;
+	border: 1px solid black;
+	padding-inline: 0.5ex;
+	line-height: 1.2;
+}
+[data-isstream]{/*yellow*/
+	background-color: rgb(255, 242, 204);
+	time {
+		font-weight: bold;
+	}
+}
+[data-isstream="true"]{/*green*/
+	background-color: rgb(217, 234, 211);
+	time {
+		font-weight: normal;
+	}
+}
+[data-isstream="false"]{/*red*/
+	background-color: rgb(244, 192, 192);
+}
+table [data-next="true"] {
+	outline: 0.4ex solid Blue;
+	outline: 0.4ex solid Highlight;
+}
+.links {
+	img {
+		height: 1lh;
+		width: 1lh;
+		vertical-align: middle;
+	}
+}
+</style>
+<script>
+function findNextStreamDate(){
+	document.querySelectorAll("[data-next]").forEach(a=>{
+		a.dataset.next = null;
+		delete a.dataset.next;
+	});
+	const nextstreamElem = document.getElementById("nextstream");
+	var upcomingDates = [...document.querySelectorAll("table .scheduleDay[data-isstream=\"true\"]>time")].map(elem => [elem,new Date(elem.getAttribute('datetime'))]).filter(date => date[1] > Date.now());
+	if(upcomingDates.length < 1){
+		//no stream :(
+		nextstreamElem.innerHTML = '';
+		nextstreamElem.textContent = "Upcoming stream not found";
+		return;
+	}
+	upcomingDates.sort((a, b) => a[1].getTime() - b[1].getTime());
+	(q=upcomingDates[0][0]).parentElement.dataset.next = "true";
+	if(nextstreamElem.textContent != q.parentElement.textContent){
+		nextstreamElem.innerHTML = '';
+		nextstreamElem.append(q.parentElement.cloneNode(true));
+	}
+	var currentTimeElem = document.getElementById("currentTime");
+	currentTimeElem.setAttribute("datetime", new Date().toISOString());
+	currentTimeElem.dataset.done_init = "0";
+	formatTimeLabel(currentTimeElem, new Date(currentTimeElem.getAttribute('datetime')));
+}
+window.setInterval(findNextStreamDate, 1000);
+const aest_offset_h = -10;
+function onload(){
+	var rawelem = document.getElementById("raw");
+	const url = "https://docs.google.com/spreadsheets/d/10AScqC2S8UPmvSPJ6d7SDa4w_x7VTplUqp4xGkq1lPg/export?format=tsv";
+	fetch(url)
+	.then(r=>{
+		r.text().then(t=>{
+			window.dat = t.split("\n").map(a=>a.split("\t"));
+			var lastdate = null;
+			var year = new Date().getFullYear();
+			var timeparsesuccess = false;
+			function parseDate(str){
+				str = str.trim().toLowerCase();
+				const months = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"]
+				var month = Number(months.findIndex(m=>str.startsWith(m)));
+				var day = Number(str.match(/\d+/gm));
+				if(lastdate != null){
+					year = lastdate.getFullYear();
+				}
+				return new Date(year, month, day);
+			}
+			function dateFunc(row, doinc){
+				var val = row.slice(1,3).join('');
+				var retval = lastdate;
+				if(val.trim().length > 0){
+					retval = lastdate = parseDate(val);
+				}else{
+					if(lastdate !== null && doinc)
+					{
+						lastdate = new Date(lastdate);
+						lastdate.setDate(lastdate.getDate() + 1);
+						retval = lastdate;
+					}
+				}
+				return retval;
+			}
+			function starttimeFunc(row){
+				dateFunc(row, true)
+				var val = row[4].trim();
+				var retval = lastdate;
+				var match = val.match(/(\d+):(\d+)\s*(A|P)M?/i);
+				timeparsesuccess = Boolean(match);
+				if(val==="TBA"){
+					timeparsesuccess = undefined;
+				}
+				if(match){
+					var h = Number(match[1]);
+					var m = Number(match[2]);
+					var ispm = Boolean(match[3]?.match(/P/i));
+					if(ispm)
+						h += 12;
+					lastdate.setUTCHours(h + aest_offset_h);
+					lastdate.setUTCMinutes(m);
+				}
+				return retval;
+			}
+			const startIndex = dat.findIndex(a=>a[0].length>1 || a[1].length>1);
+			let sample = dat.slice(startIndex, 100);
+			const endIndex = sample.findLastIndex(a=>a[3].length>0);
+			sample = sample.slice(0, endIndex + 1);
+			const tbody = document.getElementById("tbody");
+			sample.map(row=>({
+				'startdatetime': starttimeFunc(row),
+				'startdatetimetextoverride': timeparsesuccess ? null : row[4],
+				'game': row.slice(5,9).filter(a=>a.length>0).join(' '),
+				'isstream': timeparsesuccess
+			}))
+			.forEach(item=>{
+				var rowElem = document.createElement('tr');
+				rowElem.className = "scheduleDay";
+				rowElem.dataset['isstream'] = item.isstream;
+				
+				var dtElem = document.createElement('time');
+				dtElem.setAttribute('datetime', item.startdatetime.toISOString());
+				dtElem.textContent = item.startdatetime;
+				rowElem.appendChild(dtElem);
+				
+				var dtElem = document.createElement('time');
+				dtElem.setAttribute('datetime', item.startdatetime.toISOString());
+				dtElem.textContent = item.startdatetimetextoverride ?? item.startdatetime;
+				rowElem.appendChild(dtElem);
+				
+				var gameElem = document.createElement('div');
+				gameElem.textContent = item.game;
+				rowElem.appendChild(gameElem);
+				
+				
+				tbody.appendChild(rowElem);
+			});
+			document.getElementById('timeformatselector').onchange();
+		})
+	})
+	;
+}
+</script>
+</head>
+<body onload="onload()">
+<noscript>This page requires JavaScript</noscript>
+<div id="config"><label for="timeformatselector">Display times in the format:</label>
+<select id="timeformatselector" onchange="timeformatselectorchanged()">
+<option value="aest_time">AEST time (UTC+10)</option>
+<option value="Locale_time_string" selected="">Locale time string</option>
+<option value="ISO_8601_-_UTC">ISO 8601 - UTC</option>
+<option value="ISO_8601_-_local_time_zone">ISO 8601 - your local time zone</option>
+<option value="ISO_8601_-_AEST">ISO 8601 - AEST</option>
+<option value="local_time">Your local time</option>
+</select></div>
+<p class="links">
+<a href="https://twitch.tv/juzcook"><img src="https://twitch.tv/favicon.ico" /> Watch juzcook on Twitch</a><br />
+<a href="https://youtube.com/@juzcook/live"><img src="https://youtube.com/favicon.ico" /> Watch juzcook on YouTube</a><br />
+<a href="https://docs.google.com/spreadsheets/d/10AScqC2S8UPmvSPJ6d7SDa4w_x7VTplUqp4xGkq1lPg/edit?usp=sharing"><img src="https://docs.google.com/favicon.ico" /> View the official juzcook Schedule on Google Sheets</a>
+</p>
+<div><span>Current time: <time id="currentTime"></time></span></div>
+<!--div><span>Last stream:</span> <span id="timesincestream">TODO</span>
+<div id="laststream">TODO</div>
+</div-->
+<div><span>Next stream:</span> <span id="timeuntilstream"><!--TODO--></span>
+<div id="nextstream"></div>
+</div>
+<table id="table">
+<thead><th>Date</th><th>Start Time</th><th>Game</th></thead>
+<tbody id="tbody"></tbody>
+</table>
+<script>
+var timeformat = window.localStorage?.timeformat ?? "Locale_time_string";
+
+{
+	const init = ()=>{
+		//set selected item on timeformatselector to whatever matched window.localStorage.timeformat
+		const timeformatselector = document.getElementById("timeformatselector");
+		timeformatselector.value = window.localStorage?.timeformat ?? "Locale_time_string";
+		timeformatselector.onchange();
+	};
+	document.addEventListener('load',init);
+	window.addEventListener('load',init);
+}
+
+function formatTimeLabel(timelabel, dt, dateonly = false){
+	const options = {
+	  weekday: "long",
+	  year: "numeric",
+	  month: "long",
+	  day: "numeric",
+	};
+	var ofst = dt.getTimezoneOffset();
+	var j_ofst = aest_offset_h * 60;
+	if(timelabel.dataset['done_init'] != "1"){
+		timelabel.dataset['done_init'] = "1";
+		var AESTAdjustedTime = new Date(dt);
+		AESTAdjustedTime.setHours(AESTAdjustedTime.getHours() - aest_offset_h + ofst/60);
+		timelabel.dataset['aest_time'] = AESTAdjustedTime.toLocaleString("en-AU", dateonly ? options : ({}));
+		timelabel.dataset['local_time'] = dateonly ? dt.toDateString() : dt.toString();
+		timelabel.dataset['Locale_time_string'] = dt.toLocaleString(navigator.language, dateonly ? options : ({}));
+		timelabel.dataset['ISO_8601_-_UTC'] = dt.toISOString().replace(/T.*?$/gm, dateonly ? '' : '$&');
+		timelabel.dataset['ISO_8601_-_local_time_zone'] = (new Date(dt - ofst * 60 * 1000)).toISOString().replace('Z',(-Math.sign(ofst) < 0 ? '-' : '+')+String(Math.abs(ofst/60*100)).padStart(4,'0').split(/(?=..$)/).join(':')).replace(/T.*?(?=[Z\+\-])/gm, dateonly ? 'T' : '$&');
+		timelabel.dataset['ISO_8601_-_AEST'] = (new Date(dt - j_ofst * 60 * 1000)).toISOString().replace('Z',(-Math.sign(j_ofst) < 0 ? '-' : '+')+String(Math.abs(j_ofst/60*100)).padStart(4,'0').split(/(?=..$)/).join(':')).replace(/T.*?(?=[Z\+\-])/gm, dateonly ? 'T' : '$&');
+	}
+	timelabel.textContent = timelabel.dataset[timeformat];
+}
+function timeformatselectorchanged(){
+	timeformat = document.getElementById('timeformatselector').value;
+	window.localStorage.timeformat = timeformat;
+	
+	document.querySelectorAll(".scheduleDay[data-isstream=\"true\"]>time,.scheduleDay>time:first-of-type").forEach(elem=>{
+		formatTimeLabel(elem, new Date(elem.getAttribute('datetime')), elem===elem.parentElement.firstChild)
+	})
+}
+
+</script>
+</body>
+</html>
