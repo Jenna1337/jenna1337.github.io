@@ -7,20 +7,24 @@
 <meta name="author" content="Jenna Sloan" />
 <title>juzcook, when's the next stream?</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="color-scheme" content="light dark" />
 <style>
 body {
-	font-family: "docs-Nunito", sans-serif;
+	font-family: "Arial", "Verdana", "Calibri", sans-serif;
 }
 #config {
 	position: sticky;
 	top: 0;
 	background-color: #FFFE;
+	background-color: Canvas;
+	background-color: color-mix(in srgb, Canvas, transparent 5%);
 	margin-block-end: 1lh;
 }
 #table {
 	border-collapse: collapse;
 	thead > *{
 		background-color: rgb(201, 218, 248);
+		background-color: color-mix(in srgb, Canvas, #05D 21%);
 	}
 	margin-block-start: 1lh;
 }
@@ -32,18 +36,21 @@ body {
 }
 [data-isstream]{/*yellow*/
 	background-color: rgb(255, 242, 204);
+	background-color: color(srgb 1 0.94902 0.8);
+	background-color: color-mix(in srgb, Canvas, #FB0 20%);
 	time {
 		font-weight: bold;
 	}
 }
 [data-isstream="true"]{/*green*/
 	background-color: rgb(217, 234, 211);
+	background-color: color-mix(in srgb, Canvas, #492 20%);
 	time {
 		font-weight: normal;
 	}
 }
 [data-isstream="false"]{/*red*/
-	background-color: rgb(244, 192, 192);
+	background-color: color-mix(in srgb, Canvas, #C40404 25%);
 }
 table [data-next="true"] {
 	outline: 0.4ex solid Blue;
@@ -191,9 +198,9 @@ function onload(){
 <option value="local_time">Your local time</option>
 </select></div>
 <p class="links">
-<a href="https://twitch.tv/juzcook"><img src="https://twitch.tv/favicon.ico" /> Watch juzcook on Twitch</a><br />
-<a href="https://youtube.com/@juzcook/live"><img src="https://youtube.com/favicon.ico" /> Watch juzcook on YouTube</a><br />
-<a href="https://docs.google.com/spreadsheets/d/10AScqC2S8UPmvSPJ6d7SDa4w_x7VTplUqp4xGkq1lPg/edit?usp=sharing"><img src="https://docs.google.com/favicon.ico" /> View the official juzcook Schedule on Google Sheets</a>
+<a href="https://twitch.tv/juzcook"><img src="https://twitch.tv/favicon.ico" aria-label="Twitch" /> Watch juzcook on Twitch</a><br />
+<a href="https://youtube.com/@juzcook/live"><img src="https://youtube.com/favicon.ico" aria-label="YouTube" /> Watch juzcook on YouTube</a><br />
+<a href="https://docs.google.com/spreadsheets/d/10AScqC2S8UPmvSPJ6d7SDa4w_x7VTplUqp4xGkq1lPg/edit?usp=sharing"><img src="https://docs.google.com/favicon.ico" aria-label="Google Sheets" /> View the official juzcook Schedule on Google Sheets</a>
 </p>
 <div><span>Current time: <time id="currentTime"></time></span></div>
 <!--div><span>Last stream:</span> <span id="timesincestream">TODO</span>
