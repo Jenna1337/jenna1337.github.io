@@ -52,9 +52,13 @@ body {
 [data-isstream="false"]{/*red*/
 	background-color: color-mix(in srgb, Canvas, #C40404 25%);
 }
-table [data-next="true"] {
+[data-next="true"], #nextstream>tr {
 	outline: 0.4ex solid Blue;
-	outline: 0.4ex solid Highlight;
+	outline: 0.4ex solid #0FF9;
+}
+[data-last="true"], #laststream>tr {
+	outline: 0.4ex solid Orange;
+	outline: 0.4ex solid #F889;
 }
 .links {
 	img {
@@ -65,25 +69,75 @@ table [data-next="true"] {
 }
 </style>
 <script>
+function formatAsDurationString(ms){
+	var TotalSeconds = Math.round(Math.abs(ms)/1000);
+	var seconds = TotalSeconds%60;
+	var TotalMinutes = Math.floor(TotalSeconds/60);
+	var minutes = TotalMinutes%60;
+	var TotalHours = Math.floor(TotalMinutes/60);
+	var hours = TotalHours%24;
+	var TotalDays = Math.floor(TotalHours/24);
+	var days = TotalDays;
+	return ({
+		'long': `${days} days, ${hours} hours, ${minutes} minutes, ${seconds} seconds`,
+		'medium': `${days} d, ${hours} h, ${minutes} m, ${seconds} s`,
+		'short': `${days}:${hours.toString().padStart(2,'0')}:${minutes.toString().padStart(2,'0')}:${seconds.toString().padStart(2,'0')}`
+	});
+}
 function findNextStreamDate(){
 	document.querySelectorAll("[data-next]").forEach(a=>{
 		a.dataset.next = null;
 		delete a.dataset.next;
 	});
+	document.querySelectorAll("[data-last]").forEach(a=>{
+		a.dataset.last = null;
+		delete a.dataset.last;
+	});
+	const laststreamElem = document.getElementById("laststream");
 	const nextstreamElem = document.getElementById("nextstream");
-	var upcomingDates = [...document.querySelectorAll("table .scheduleDay[data-isstream=\"true\"]>time")].map(elem => [elem,new Date(elem.getAttribute('datetime'))]).filter(date => date[1] > Date.now());
+	const timesincestreamElem = document.getElementById("timesincestream");
+	const timeuntilstreamElem = document.getElementById("timeuntilstream");
+	const now = Date.now();
+	const elemTimeMap = [...document.querySelectorAll("table .scheduleDay[data-isstream=\"true\"] time")].map(elem => [elem,new Date(elem.getAttribute('datetime'))]);
+	var q, r, d;
+	var pastDates = elemTimeMap.filter(date => date[1] < now);
+	if(pastDates.length < 1){
+		//no stream :(
+		laststreamElem.innerHTML = '';
+		laststreamElem.textContent = "Upcoming stream not found";
+		timesincestreamElem.textContent = "";
+	} else {
+		pastDates.sort((a, b) => a[1].getTime() - b[1].getTime());
+		(r=(q=pastDates.at(-1))[0].closest("tr")).dataset.last = "true";
+		if(laststreamElem.textContent != r.textContent){
+			laststreamElem.innerHTML = '';
+			laststreamElem.append(r.cloneNode(true));
+		}
+		d = formatAsDurationString(q[1] - now);
+		timesincestreamElem.textContent = d.short + ' ago';
+		timesincestreamElem.title = d.long + ' ago';
+		timesincestreamElem.setAttribute("aria-label", d.long + ' ago');
+	}
+	
+	var upcomingDates = elemTimeMap.filter(date => date[1] > now);
 	if(upcomingDates.length < 1){
 		//no stream :(
 		nextstreamElem.innerHTML = '';
 		nextstreamElem.textContent = "Upcoming stream not found";
-		return;
+		timeuntilstreamElem.textContent = "";
+	} else {
+		upcomingDates.sort((a, b) => a[1].getTime() - b[1].getTime());
+		(r=(q=upcomingDates[0])[0].closest("tr")).dataset.next = "true";
+		if(nextstreamElem.textContent != r.textContent){
+			nextstreamElem.innerHTML = '';
+			nextstreamElem.append(r.cloneNode(true));
+		}
+		d = formatAsDurationString(q[1] - now);
+		timeuntilstreamElem.textContent = d.short + ' from now';
+		timeuntilstreamElem.title = d.long + ' from now';
+		timeuntilstreamElem.setAttribute("aria-label", d.long + ' from now');
 	}
-	upcomingDates.sort((a, b) => a[1].getTime() - b[1].getTime());
-	(q=upcomingDates[0][0]).parentElement.dataset.next = "true";
-	if(nextstreamElem.textContent != q.parentElement.textContent){
-		nextstreamElem.innerHTML = '';
-		nextstreamElem.append(q.parentElement.cloneNode(true));
-	}
+	
 	var currentTimeElem = document.getElementById("currentTime");
 	currentTimeElem.setAttribute("datetime", new Date().toISOString());
 	currentTimeElem.dataset.done_init = "0";
@@ -165,16 +219,22 @@ function onload(){
 				var dtElem = document.createElement('time');
 				dtElem.setAttribute('datetime', item.startdatetime.toISOString());
 				dtElem.textContent = item.startdatetime;
-				rowElem.appendChild(dtElem);
+				var dtElemTd = document.createElement('td');
+				dtElemTd.appendChild(dtElem);
+				rowElem.appendChild(dtElemTd);
 				
 				var dtElem = document.createElement('time');
 				dtElem.setAttribute('datetime', item.startdatetime.toISOString());
 				dtElem.textContent = item.startdatetimetextoverride ?? item.startdatetime;
-				rowElem.appendChild(dtElem);
+				var dtElemTd = document.createElement('td');
+				dtElemTd.appendChild(dtElem);
+				rowElem.appendChild(dtElemTd);
 				
 				var gameElem = document.createElement('div');
 				gameElem.textContent = item.game;
-				rowElem.appendChild(gameElem);
+				var gameElemTd = document.createElement('td');
+				gameElemTd.appendChild(gameElem);
+				rowElem.appendChild(gameElemTd);
 				
 				
 				tbody.appendChild(rowElem);
@@ -187,9 +247,10 @@ function onload(){
 </script>
 </head>
 <body onload="onload()">
+<h1>juzcook next stream checker</h1>
 <noscript>This page requires JavaScript</noscript>
-<div id="config"><label for="timeformatselector">Display times in the format:</label>
-<select id="timeformatselector" onchange="timeformatselectorchanged()">
+<div id="config" aria-label="Settings"><label for="timeformatselector">Display times in the format: </label>
+<select id="timeformatselector" onchange="timeformatselectorchanged()" title="Times will be displayed in the selected format">
 <option value="aest_time">AEST time (UTC+10)</option>
 <option value="Locale_time_string" selected="">Locale time string</option>
 <option value="ISO_8601_-_UTC">ISO 8601 - UTC</option>
@@ -197,20 +258,20 @@ function onload(){
 <option value="ISO_8601_-_AEST">ISO 8601 - AEST</option>
 <option value="local_time">Your local time</option>
 </select></div>
-<p class="links">
-<a href="https://twitch.tv/juzcook"><img src="https://twitch.tv/favicon.ico" aria-label="Twitch" /> Watch juzcook on Twitch</a><br />
-<a href="https://youtube.com/@juzcook/live"><img src="https://youtube.com/favicon.ico" aria-label="YouTube" /> Watch juzcook on YouTube</a><br />
-<a href="https://docs.google.com/spreadsheets/d/10AScqC2S8UPmvSPJ6d7SDa4w_x7VTplUqp4xGkq1lPg/edit?usp=sharing"><img src="https://docs.google.com/favicon.ico" aria-label="Google Sheets" /> View the official juzcook Schedule on Google Sheets</a>
+<p class="links" aria-label="Links">
+<a href="https://twitch.tv/juzcook"><img src="https://twitch.tv/favicon.ico" aria-hidden="true" /> Watch juzcook on Twitch</a><br />
+<a href="https://youtube.com/@juzcook/live"><img src="https://youtube.com/favicon.ico" aria-hidden="true" /> Watch juzcook on YouTube</a><br />
+<a href="https://docs.google.com/spreadsheets/d/10AScqC2S8UPmvSPJ6d7SDa4w_x7VTplUqp4xGkq1lPg/edit?usp=sharing"><img src="https://docs.google.com/favicon.ico" aria-hidden="true" /> View the official juzcook Schedule on Google Sheets</a>
 </p>
-<div><span>Current time: <time id="currentTime"></time></span></div>
-<!--div><span>Last stream:</span> <span id="timesincestream">TODO</span>
-<div id="laststream">TODO</div>
-</div-->
-<div><span>Next stream:</span> <span id="timeuntilstream"><!--TODO--></span>
+<div aria-label="Current time"><span>Current time: <time id="currentTime" role="timer" aria-live="off"></time></span></div>
+<div aria-label="Previous stream"><span>Last stream: </span><span id="timesincestream" role="timer" aria-live="off"></span>
+<div id="laststream"></div>
+</div>
+<div aria-label="Next stream"><span>Next stream: </span><span id="timeuntilstream" role="timer" aria-live="off"></span>
 <div id="nextstream"></div>
 </div>
 <table id="table">
-<thead><th>Date</th><th>Start Time</th><th>Game</th></thead>
+<thead><tr><th scope="col">Date</th><th scope="col">Start Time</th><th scope="col">Game</th></tr></thead>
 <tbody id="tbody"></tbody>
 </table>
 <script>
@@ -253,7 +314,7 @@ function timeformatselectorchanged(){
 	timeformat = document.getElementById('timeformatselector').value;
 	window.localStorage.timeformat = timeformat;
 	
-	document.querySelectorAll(".scheduleDay[data-isstream=\"true\"]>time,.scheduleDay>time:first-of-type").forEach(elem=>{
+	document.querySelectorAll(".scheduleDay[data-isstream=\"true\"] time,.scheduleDay>*:first-of-type time").forEach(elem=>{
 		formatTimeLabel(elem, new Date(elem.getAttribute('datetime')), elem===elem.parentElement.firstChild)
 	})
 }
