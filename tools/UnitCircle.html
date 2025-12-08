@@ -159,6 +159,31 @@ document.addEventListener("DOMContentLoaded",function(){
 Number.prototype.roundTo = function(p){
 	return parseFloat(this.toFixed(p));
 };
+const fontSize = 10;
+function addFractionText(svgParentTextElement, topText, bottomText, xPos = null){
+	{
+		const titleElem = document.createElementNS("http://www.w3.org/2000/svg", "title");
+		titleElem.textContent = topText + "/" + bottomText;
+		svgParentTextElement.insertBefore(titleElem, svgParentTextElement.firstChild);
+	}
+	if(bottomText === 1 || bottomText === '1' || bottomText == null || bottomText === ''){
+		svgParentTextElement.textContent = topText;
+	}
+	else{
+		const posX = xPos ?? svgParentTextElement.getAttribute("x");
+		const textElem_top = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
+		const textElem_bot = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
+		textElem_top.setAttribute("text-decoration", "underline");
+		textElem_top.setAttribute("x", posX);
+		textElem_bot.setAttribute("x", posX);
+		textElem_top.setAttribute("dy", -fontSize / 2);
+		textElem_bot.setAttribute("dy", fontSize);
+		textElem_top.textContent = topText;
+		textElem_bot.textContent = bottomText;
+		svgParentTextElement.appendChild(textElem_top);
+		svgParentTextElement.appendChild(textElem_bot);
+	}
+}
 const deg_r = 62;
 const rad_r = 85;
 const ptx_r = 120;
@@ -202,30 +227,19 @@ function addLineForAngle(a, target=null){
 		textElem_Rad.setAttribute("y", rad_r * y_base);
 		textElem_Rad.setAttribute("filter", "url(#solidBG)");
 		textElem_Rad.setAttribute("role", "math");
-		const fontSize = 10;
 		{
-			const frac = radToFrac(rad);
+			const frac = radiansToFrac(rad);
 			if(frac != null){
 				const pi_ch = "π";
 				const topText = (frac.numerator == 1 ? "" : frac.numerator) + pi_ch;
+				const botText = frac.denominator;
+				addFractionText(textElem_Rad, topText, botText);
 				if(frac.denominator == 1){
-					textElem_Rad.textContent = frac.numerator + pi_ch;
 					textElem_Rad.ariaLabel = textElem_Rad.textContent + " radians";
 					textElem_Rad.ariaDescription = frac.numerator + " pi radians";
 				}
 				else{
-					const textElem_top = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
-					const textElem_bot = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
-					textElem_top.setAttribute("text-decoration", "underline");
-					textElem_top.setAttribute("x", textElem_Rad_x);
-					textElem_bot.setAttribute("x", textElem_Rad_x);
-					textElem_top.setAttribute("dy", -fontSize / 2);
-					textElem_bot.setAttribute("dy", fontSize);
-					textElem_top.textContent = frac.numerator + pi_ch;
-					textElem_bot.textContent = frac.denominator;
-					textElem_Rad.appendChild(textElem_top);
-					textElem_Rad.appendChild(textElem_bot);
-					textElem_Rad.ariaLabel = textElem_top.textContent + "/" + textElem_bot.textContent;
+					textElem_Rad.ariaLabel = topText + "/" + botText + "radians";
 					textElem_Rad.ariaDescription = frac.numerator + " pi over " + frac.denominator + " radians";
 				}
 			}else{
@@ -242,10 +256,33 @@ function addLineForAngle(a, target=null){
 		pointElem.setAttribute("y", 100 * y_base);
 		groupElem.appendChild(pointElem);
 		
-		textElem_Point.setAttribute("x", ptx_r * x_base);
-		textElem_Point.setAttribute("y", ptx_r * y_base);
-		//TODO convert x and y values to fractions with radicals, and display them similarly to the radian fractions
-		textElem_Point.textContent = `(${x_base.roundTo(3)}, ${y_base.roundTo(3)})`;
+		const textElem_Point_X = ptx_r * x_base;
+		const textElem_Point_Y = ptx_r * y_base;
+		textElem_Point.setAttribute("x", textElem_Point_X);
+		textElem_Point.setAttribute("y", textElem_Point_Y);
+		if(false){//TODO add rotate text option?
+			textElem_Point.setAttribute("transform", `rotate(${90 - a} ${textElem_Point_X} ${textElem_Point_Y})`);
+		}
+		const fracX = numberToRadicalFraction(x_base);
+		const fracY = numberToRadicalFraction(y_base);
+		console.log(fracX, fracY);
+		const xTop = fracX?.getTopString() ?? x_base.roundTo(3);
+		const xBot = fracX?.getBottomString();
+		const yTop = fracY?.getTopString() ?? y_base.roundTo(3);
+		const yBot = fracY?.getBottomString();
+		const xElem = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
+		const yElem = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
+		addFractionText(xElem, xTop, xBot, textElem_Point_X);
+		window.requestAnimationFrame(()=>{
+			addFractionText(yElem, yTop, yBot, textElem_Point_X + xElem.getBBox().width);
+		});
+		xElem.setAttribute("y", textElem_Point_Y);
+		yElem.setAttribute("y", textElem_Point_Y);
+		textElem_Point.appendChild(xElem);
+		textElem_Point.appendChild(yElem);
+		//TODO add decor to the fraction display, then remove the line below setting textElem_Point.textContent
+		
+		textElem_Point.textContent = `(${fracX?.toString() ?? x_base.roundTo(3)}, ${fracY?.toString() ?? y_base.roundTo(3)})`;
 		textElem_Point.ariaLabel = `(${x_base.roundTo(3)}, ${y_base.roundTo(3)})`;
 		groupElem.appendChild(textElem_Point);
 	}
@@ -256,7 +293,101 @@ function addLineForAngle(a, target=null){
 	targetNode.appendChild(groupElem);
 	return groupElem;
 }
-function radToFrac(radians){
+function numberToRadicalFraction(decimal){
+	const sgn = Math.sign(decimal);
+	decimal = Math.abs(decimal);
+	class RadicalFraction {
+		constructor(sign, numerator_coeff, sqrt_value, denominator, bottom_sqrt) {
+			this.sign = sign; // e.g., 1 for sqrt(3)/2
+			this.numerator_coeff = numerator_coeff; // e.g., 1 for sqrt(3)/2
+			this.sqrt_value = sqrt_value;           // e.g., 3 for sqrt(3)/2
+			this.denominator = denominator;         // e.g., 2 for sqrt(3)/2
+			this.bottom_sqrt = bottom_sqrt;         // e.g., 2 for sqrt(3)/2
+		}
+		rawVal() {
+			return this.sign * this.numerator_coeff * Math.sqrt(this.sqrt_value) / (this.denominator * Math.sqrt(this.bottom_sqrt));
+		}
+		toString() {
+			let retVal = '';
+			if(this.sign<0){
+				retVal += '-';
+			}
+			if (this.numerator_coeff === 1 && this.sqrt_value === 1) {
+				retVal += '1';
+			}
+			if (this.numerator_coeff !== 1) {
+				retVal += this.numerator_coeff;
+			}
+			if (this.sqrt_value !== 1) {
+				retVal += `\u221A${this.sqrt_value}`;
+			}
+			if (this.denominator !== 1) {
+				retVal += `/${this.denominator}`;
+			}
+			if (this.bottom_sqrt !== 1) {
+				if (this.denominator === 1) {
+					retVal += '/'
+				}
+				retVal += `\u221A${this.bottom_sqrt}`;
+			}
+			return retVal;
+		}
+		getTopString() {
+			let retVal = '';
+			if(this.sign<0){
+				retVal += '-';
+			}
+			if (this.numerator_coeff === 1 && this.sqrt_value === 1) {
+				retVal += '1';
+			}
+			if (this.numerator_coeff !== 1) {
+				retVal += this.numerator_coeff;
+			}
+			if (this.sqrt_value !== 1) {
+				retVal += `\u221A${this.sqrt_value}`;
+			}
+			return retVal;
+		}
+		getBottomString() {
+			let retVal = '';
+			if (this.denominator !== 1) {
+				retVal += `${this.denominator}`;
+			}
+			if (this.bottom_sqrt !== 1) {
+				retVal += `\u221A${this.bottom_sqrt}`;
+			}
+			return retVal;
+		}
+	}
+
+	const tolerance = 1.0E-5; // Adjust for desired precision
+	const granularity = 10;
+	let closest = null;
+	let closestDiff = 9;
+	
+	outerLoop:
+	for (let sqrt_btm = 1; sqrt_btm <= granularity; sqrt_btm++) {
+		for (let sqrt_val = 1; sqrt_val <= granularity; sqrt_val++) {
+			for (let numerator = 1; numerator <= granularity; numerator++) {
+				for (let denominator = 1; denominator <= granularity; denominator++) { // Iterate through possible denominators
+					//console.log(frac, frac.rawVal(), frac.toString());
+					const calcVal = numerator * Math.sqrt(sqrt_val) / (denominator * Math.sqrt(sqrt_btm));
+					const calcDiff = Math.abs(decimal - calcVal);
+					if(calcDiff < closestDiff){
+						closest = new RadicalFraction(sgn, numerator, sqrt_val, denominator, sqrt_btm);
+						closestDiff = calcDiff;
+						if(closestDiff < tolerance){
+							return closest;
+						}
+					}
+				}
+			}
+		}
+	}
+	console.log(closest.toString(), closest.rawVal(), closestDiff);
+	return null; // Could not find a suitable fraction within tolerance
+}
+function radiansToFrac(radians){
 	const fractionOfPi = radians / Math.PI; // This will be 0.25 for π/4
 	function decimalToFraction(decimal) {
 		const tolerance = 1.0E-5; // Adjust for desired precision
@@ -340,7 +471,7 @@ document.addEventListener("DOMContentLoaded",function(){
 	</defs>
 	<path class="axes" d="M-999,0H999M0,-999V999" />
 	<circle cx="0" cy="0" r="100" fill="none" stroke-width="1"/>
-	<g id="builtin-angles"><g class="angle-group cardinal" role="group" aria-label="0 degrees" aria-description="0 degrees equals 0 pi radians, and is approximately at point (1, 0) on the unit circle."><path d="M0,0L100,0"></path><text class="text-deg" x="62" y="0" filter="url(#solidBG)" role="math" aria-label="0 degrees">0°</text><text class="text-rad" x="85" y="0" filter="url(#solidBG)" role="math" aria-label="0π radians" aria-description="0 pi radians">0π</text><use href="#point" x="100" y="0"></use><text x="120" y="0" aria-label="(1, 0)">(1, 0)</text></g><g class="angle-group" role="group" aria-label="30 degrees" aria-description="30 degrees equals 1 pi over 6 radians, and is approximately at point (0.866, -0.5) on the unit circle."><path d="M0,0L86.60254037844388,-49.99999999999999"></path><text class="text-deg" x="53.6935750346352" y="-30.999999999999996" filter="url(#solidBG)" role="math" aria-label="30 degrees">30°</text><text class="text-rad" x="73.6121593216773" y="-42.49999999999999" filter="url(#solidBG)" role="math" aria-label="1π/6" aria-description="1 pi over 6 radians"><tspan text-decoration="underline" x="73.6121593216773" dy="-5">1π</tspan><tspan x="73.6121593216773" dy="10">6</tspan></text><use href="#point" x="86.60254037844388" y="-49.99999999999999"></use><text x="103.92304845413264" y="-59.99999999999999" aria-label="(0.866, -0.5)">(0.866, -0.5)</text></g><g class="angle-group" role="group" aria-label="45 degrees" aria-description="45 degrees equals 1 pi over 4 radians, and is approximately at point (0.707, -0.707) on the unit circle."><path d="M0,0L70.71067811865476,-70.71067811865476"></path><text class="text-deg" x="43.84062043356595" y="-43.84062043356595" filter="url(#solidBG)" role="math" aria-label="45 degrees">45°</text><text class="text-rad" x="60.10407640085654" y="-60.10407640085654" filter="url(#solidBG)" role="math" aria-label="1π/4" aria-description="1 pi over 4 radians"><tspan text-decoration="underline" x="60.10407640085654" dy="-5">1π</tspan><tspan x="60.10407640085654" dy="10">4</tspan></text><use href="#point" x="70.71067811865476" y="-70.71067811865476"></use><text x="84.8528137423857" y="-84.8528137423857" aria-label="(0.707, -0.707)">(0.707, -0.707)</text></g><g class="angle-group" role="group" aria-label="60 degrees" aria-description="60 degrees equals 1 pi over 3 radians, and is approximately at point (0.5, -0.866) on the unit circle."><path d="M0,0L50.000000000000014,-86.60254037844386"></path><text class="text-deg" x="31.000000000000007" y="-53.693575034635195" filter="url(#solidBG)" role="math" aria-label="60 degrees">60°</text><text class="text-rad" x="42.50000000000001" y="-73.61215932167728" filter="url(#solidBG)" role="math" aria-label="1π/3" aria-description="1 pi over 3 radians"><tspan text-decoration="underline" x="42.50000000000001" dy="-5">1π</tspan><tspan x="42.50000000000001" dy="10">3</tspan></text><use href="#point" x="50.000000000000014" y="-86.60254037844386"></use><text x="60.000000000000014" y="-103.92304845413263" aria-label="(0.5, -0.866)">(0.5, -0.866)</text></g><g class="angle-group cardinal" role="group" aria-label="90 degrees" aria-description="90 degrees equals 1 pi over 2 radians, and is approximately at point (0, -1) on the unit circle."><path d="M0,0L6.123233995736766e-15,-100"></path><text class="text-deg" x="3.796405077356795e-15" y="-62" filter="url(#solidBG)" role="math" aria-label="90 degrees">90°</text><text class="text-rad" x="5.204748896376251e-15" y="-85" filter="url(#solidBG)" role="math" aria-label="1π/2" aria-description="1 pi over 2 radians"><tspan text-decoration="underline" x="5.204748896376251e-15" dy="-5">1π</tspan><tspan x="5.204748896376251e-15" dy="10">2</tspan></text><use href="#point" x="6.123233995736766e-15" y="-100"></use><text x="7.34788079488412e-15" y="-120" aria-label="(0, -1)">(0, -1)</text></g><g class="angle-group" role="group" aria-label="120 degrees" aria-description="120 degrees equals 2 pi over 3 radians, and is approximately at point (-0.5, -0.866) on the unit circle."><path d="M0,0L-49.99999999999998,-86.60254037844388"></path><text class="text-deg" x="-30.999999999999986" y="-53.6935750346352" filter="url(#solidBG)" role="math" aria-label="120 degrees">120°</text><text class="text-rad" x="-42.49999999999998" y="-73.6121593216773" filter="url(#solidBG)" role="math" aria-label="2π/3" aria-description="2 pi over 3 radians"><tspan text-decoration="underline" x="-42.49999999999998" dy="-5">2π</tspan><tspan x="-42.49999999999998" dy="10">3</tspan></text><use href="#point" x="-49.99999999999998" y="-86.60254037844388"></use><text x="-59.99999999999997" y="-103.92304845413264" aria-label="(-0.5, -0.866)">(-0.5, -0.866)</text></g><g class="angle-group" role="group" aria-label="135 degrees" aria-description="135 degrees equals 3 pi over 4 radians, and is approximately at point (-0.707, -0.707) on the unit circle."><path d="M0,0L-70.71067811865474,-70.71067811865476"></path><text class="text-deg" x="-43.840620433565945" y="-43.84062043356595" filter="url(#solidBG)" role="math" aria-label="135 degrees">135°</text><text class="text-rad" x="-60.104076400856535" y="-60.10407640085654" filter="url(#solidBG)" role="math" aria-label="3π/4" aria-description="3 pi over 4 radians"><tspan text-decoration="underline" x="-60.104076400856535" dy="-5">3π</tspan><tspan x="-60.104076400856535" dy="10">4</tspan></text><use href="#point" x="-70.71067811865474" y="-70.71067811865476"></use><text x="-84.85281374238569" y="-84.8528137423857" aria-label="(-0.707, -0.707)">(-0.707, -0.707)</text></g><g class="angle-group" role="group" aria-label="150 degrees" aria-description="150 degrees equals 5 pi over 6 radians, and is approximately at point (-0.866, -0.5) on the unit circle."><path d="M0,0L-86.60254037844388,-49.99999999999999"></path><text class="text-deg" x="-53.6935750346352" y="-30.999999999999996" filter="url(#solidBG)" role="math" aria-label="150 degrees">150°</text><text class="text-rad" x="-73.6121593216773" y="-42.49999999999999" filter="url(#solidBG)" role="math" aria-label="5π/6" aria-description="5 pi over 6 radians"><tspan text-decoration="underline" x="-73.6121593216773" dy="-5">5π</tspan><tspan x="-73.6121593216773" dy="10">6</tspan></text><use href="#point" x="-86.60254037844388" y="-49.99999999999999"></use><text x="-103.92304845413264" y="-59.99999999999999" aria-label="(-0.866, -0.5)">(-0.866, -0.5)</text></g><g class="angle-group cardinal" role="group" aria-label="180 degrees" aria-description="180 degrees equals 1 pi radians, and is approximately at point (-1, 0) on the unit circle."><path d="M0,0L-100,-1.2246467991473532e-14"></path><text class="text-deg" x="-62" y="-7.59281015471359e-15" filter="url(#solidBG)" role="math" aria-label="180 degrees">180°</text><text class="text-rad" x="-85" y="-1.0409497792752502e-14" filter="url(#solidBG)" role="math" aria-label="1π radians" aria-description="1 pi radians">1π</text><use href="#point" x="-100" y="-1.2246467991473532e-14"></use><text x="-120" y="-1.469576158976824e-14" aria-label="(-1, 0)">(-1, 0)</text></g><g class="angle-group" role="group" aria-label="210 degrees" aria-description="210 degrees equals 7 pi over 6 radians, and is approximately at point (-0.866, 0.5) on the unit circle."><path d="M0,0L-86.60254037844386,50.000000000000014"></path><text class="text-deg" x="-53.693575034635195" y="31.000000000000007" filter="url(#solidBG)" role="math" aria-label="210 degrees">210°</text><text class="text-rad" x="-73.61215932167728" y="42.50000000000001" filter="url(#solidBG)" role="math" aria-label="7π/6" aria-description="7 pi over 6 radians"><tspan text-decoration="underline" x="-73.61215932167728" dy="-5">7π</tspan><tspan x="-73.61215932167728" dy="10">6</tspan></text><use href="#point" x="-86.60254037844386" y="50.000000000000014"></use><text x="-103.92304845413263" y="60.000000000000014" aria-label="(-0.866, 0.5)">(-0.866, 0.5)</text></g><g class="angle-group" role="group" aria-label="225 degrees" aria-description="225 degrees equals 5 pi over 4 radians, and is approximately at point (-0.707, 0.707) on the unit circle."><path d="M0,0L-70.71067811865477,70.71067811865474"></path><text class="text-deg" x="-43.84062043356596" y="43.840620433565945" filter="url(#solidBG)" role="math" aria-label="225 degrees">225°</text><text class="text-rad" x="-60.104076400856556" y="60.104076400856535" filter="url(#solidBG)" role="math" aria-label="5π/4" aria-description="5 pi over 4 radians"><tspan text-decoration="underline" x="-60.104076400856556" dy="-5">5π</tspan><tspan x="-60.104076400856556" dy="10">4</tspan></text><use href="#point" x="-70.71067811865477" y="70.71067811865474"></use><text x="-84.85281374238572" y="84.85281374238569" aria-label="(-0.707, 0.707)">(-0.707, 0.707)</text></g><g class="angle-group" role="group" aria-label="240 degrees" aria-description="240 degrees equals 4 pi over 3 radians, and is approximately at point (-0.5, 0.866) on the unit circle."><path d="M0,0L-50.00000000000004,86.60254037844385"></path><text class="text-deg" x="-31.00000000000003" y="53.69357503463519" filter="url(#solidBG)" role="math" aria-label="240 degrees">240°</text><text class="text-rad" x="-42.500000000000036" y="73.61215932167727" filter="url(#solidBG)" role="math" aria-label="4π/3" aria-description="4 pi over 3 radians"><tspan text-decoration="underline" x="-42.500000000000036" dy="-5">4π</tspan><tspan x="-42.500000000000036" dy="10">3</tspan></text><use href="#point" x="-50.00000000000004" y="86.60254037844385"></use><text x="-60.00000000000006" y="103.92304845413261" aria-label="(-0.5, 0.866)">(-0.5, 0.866)</text></g><g class="angle-group cardinal" role="group" aria-label="270 degrees" aria-description="270 degrees equals 3 pi over 2 radians, and is approximately at point (0, 1) on the unit circle."><path d="M0,0L-1.8369701987210297e-14,100"></path><text class="text-deg" x="-1.1389215232070385e-14" y="62" filter="url(#solidBG)" role="math" aria-label="270 degrees">270°</text><text class="text-rad" x="-1.5614246689128753e-14" y="85" filter="url(#solidBG)" role="math" aria-label="3π/2" aria-description="3 pi over 2 radians"><tspan text-decoration="underline" x="-1.5614246689128753e-14" dy="-5">3π</tspan><tspan x="-1.5614246689128753e-14" dy="10">2</tspan></text><use href="#point" x="-1.8369701987210297e-14" y="100"></use><text x="-2.2043642384652355e-14" y="120" aria-label="(0, 1)">(0, 1)</text></g><g class="angle-group" role="group" aria-label="300 degrees" aria-description="300 degrees equals 5 pi over 3 radians, and is approximately at point (0.5, 0.866) on the unit circle."><path d="M0,0L50.000000000000014,86.60254037844386"></path><text class="text-deg" x="31.000000000000007" y="53.693575034635195" filter="url(#solidBG)" role="math" aria-label="300 degrees">300°</text><text class="text-rad" x="42.50000000000001" y="73.61215932167728" filter="url(#solidBG)" role="math" aria-label="5π/3" aria-description="5 pi over 3 radians"><tspan text-decoration="underline" x="42.50000000000001" dy="-5">5π</tspan><tspan x="42.50000000000001" dy="10">3</tspan></text><use href="#point" x="50.000000000000014" y="86.60254037844386"></use><text x="60.000000000000014" y="103.92304845413263" aria-label="(0.5, 0.866)">(0.5, 0.866)</text></g><g class="angle-group" role="group" aria-label="315 degrees" aria-description="315 degrees equals 7 pi over 4 radians, and is approximately at point (0.707, 0.707) on the unit circle."><path d="M0,0L70.71067811865474,70.71067811865477"></path><text class="text-deg" x="43.84062043356594" y="43.84062043356596" filter="url(#solidBG)" role="math" aria-label="315 degrees">315°</text><text class="text-rad" x="60.10407640085653" y="60.104076400856556" filter="url(#solidBG)" role="math" aria-label="7π/4" aria-description="7 pi over 4 radians"><tspan text-decoration="underline" x="60.10407640085653" dy="-5">7π</tspan><tspan x="60.10407640085653" dy="10">4</tspan></text><use href="#point" x="70.71067811865474" y="70.71067811865477"></use><text x="84.85281374238568" y="84.85281374238572" aria-label="(0.707, 0.707)">(0.707, 0.707)</text></g><g class="angle-group" role="group" aria-label="330 degrees" aria-description="330 degrees equals 11 pi over 6 radians, and is approximately at point (0.866, 0.5) on the unit circle."><path d="M0,0L86.60254037844383,50.00000000000004"></path><text class="text-deg" x="53.69357503463518" y="31.00000000000003" filter="url(#solidBG)" role="math" aria-label="330 degrees">330°</text><text class="text-rad" x="73.61215932167727" y="42.500000000000036" filter="url(#solidBG)" role="math" aria-label="11π/6" aria-description="11 pi over 6 radians"><tspan text-decoration="underline" x="73.61215932167727" dy="-5">11π</tspan><tspan x="73.61215932167727" dy="10">6</tspan></text><use href="#point" x="86.60254037844383" y="50.00000000000004"></use><text x="103.92304845413261" y="60.00000000000006" aria-label="(0.866, 0.5)">(0.866, 0.5)</text></g></g>
+	<g id="builtin-angles"><g class="angle-group cardinal" role="group" aria-label="0 degrees" aria-description="0 degrees equals 0 pi radians, and is approximately at point (1, 0) on the unit circle."><path d="M0,0L100,0"></path><text class="text-deg" x="62" y="0" filter="url(#solidBG)" role="math" aria-label="0 degrees">0°</text><text class="text-rad" x="85" y="0" filter="url(#solidBG)" role="math" aria-label="0π radians" aria-description="0 pi radians">0π</text><use href="#point" x="100" y="0"></use><text x="120" y="0" aria-label="(1, 0)">(1, 0)</text></g><g class="angle-group" role="group" aria-label="30 degrees" aria-description="30 degrees equals 1 pi over 6 radians, and is approximately at point (0.866, -0.5) on the unit circle."><path d="M0,0L86.60254037844388,-49.99999999999999"></path><text class="text-deg" x="53.6935750346352" y="-30.999999999999996" filter="url(#solidBG)" role="math" aria-label="30 degrees">30°</text><text class="text-rad" x="73.6121593216773" y="-42.49999999999999" filter="url(#solidBG)" role="math" aria-label="π/6radians" aria-description="1 pi over 6 radians"><title>π/6</title><tspan text-decoration="underline" x="73.6121593216773" dy="-5">π</tspan><tspan x="73.6121593216773" dy="10">6</tspan></text><use href="#point" x="86.60254037844388" y="-49.99999999999999"></use><text x="103.92304845413264" y="-59.99999999999999" aria-label="(0.866, -0.5)">(√3/2, -1/2)</text></g><g class="angle-group" role="group" aria-label="45 degrees" aria-description="45 degrees equals 1 pi over 4 radians, and is approximately at point (0.707, -0.707) on the unit circle."><path d="M0,0L70.71067811865476,-70.71067811865474"></path><text class="text-deg" x="43.84062043356595" y="-43.840620433565945" filter="url(#solidBG)" role="math" aria-label="45 degrees">45°</text><text class="text-rad" x="60.10407640085654" y="-60.104076400856535" filter="url(#solidBG)" role="math" aria-label="π/4radians" aria-description="1 pi over 4 radians"><title>π/4</title><tspan text-decoration="underline" x="60.10407640085654" dy="-5">π</tspan><tspan x="60.10407640085654" dy="10">4</tspan></text><use href="#point" x="70.71067811865476" y="-70.71067811865474"></use><text x="84.8528137423857" y="-84.85281374238569" aria-label="(0.707, -0.707)">(√2/2, -√2/2)</text></g><g class="angle-group" role="group" aria-label="60 degrees" aria-description="60 degrees equals 1 pi over 3 radians, and is approximately at point (0.5, -0.866) on the unit circle."><path d="M0,0L50.000000000000014,-86.60254037844386"></path><text class="text-deg" x="31.000000000000007" y="-53.693575034635195" filter="url(#solidBG)" role="math" aria-label="60 degrees">60°</text><text class="text-rad" x="42.50000000000001" y="-73.61215932167728" filter="url(#solidBG)" role="math" aria-label="π/3radians" aria-description="1 pi over 3 radians"><title>π/3</title><tspan text-decoration="underline" x="42.50000000000001" dy="-5">π</tspan><tspan x="42.50000000000001" dy="10">3</tspan></text><use href="#point" x="50.000000000000014" y="-86.60254037844386"></use><text x="60.000000000000014" y="-103.92304845413263" aria-label="(0.5, -0.866)">(1/2, -√3/2)</text></g><g class="angle-group cardinal" role="group" aria-label="90 degrees" aria-description="90 degrees equals 1 pi over 2 radians, and is approximately at point (0, -1) on the unit circle."><path d="M0,0L6.123233995736766e-15,-100"></path><text class="text-deg" x="3.796405077356795e-15" y="-62" filter="url(#solidBG)" role="math" aria-label="90 degrees">90°</text><text class="text-rad" x="5.204748896376251e-15" y="-85" filter="url(#solidBG)" role="math" aria-label="π/2radians" aria-description="1 pi over 2 radians"><title>π/2</title><tspan text-decoration="underline" x="5.204748896376251e-15" dy="-5">π</tspan><tspan x="5.204748896376251e-15" dy="10">2</tspan></text><use href="#point" x="6.123233995736766e-15" y="-100"></use><text x="7.34788079488412e-15" y="-120" aria-label="(0, -1)">(0, -1)</text></g><g class="angle-group" role="group" aria-label="120 degrees" aria-description="120 degrees equals 2 pi over 3 radians, and is approximately at point (-0.5, -0.866) on the unit circle."><path d="M0,0L-49.99999999999998,-86.60254037844388"></path><text class="text-deg" x="-30.999999999999986" y="-53.6935750346352" filter="url(#solidBG)" role="math" aria-label="120 degrees">120°</text><text class="text-rad" x="-42.49999999999998" y="-73.6121593216773" filter="url(#solidBG)" role="math" aria-label="2π/3radians" aria-description="2 pi over 3 radians"><title>2π/3</title><tspan text-decoration="underline" x="-42.49999999999998" dy="-5">2π</tspan><tspan x="-42.49999999999998" dy="10">3</tspan></text><use href="#point" x="-49.99999999999998" y="-86.60254037844388"></use><text x="-59.99999999999997" y="-103.92304845413264" aria-label="(-0.5, -0.866)">(-1/2, -√3/2)</text></g><g class="angle-group" role="group" aria-label="135 degrees" aria-description="135 degrees equals 3 pi over 4 radians, and is approximately at point (-0.707, -0.707) on the unit circle."><path d="M0,0L-70.71067811865474,-70.71067811865476"></path><text class="text-deg" x="-43.840620433565945" y="-43.84062043356595" filter="url(#solidBG)" role="math" aria-label="135 degrees">135°</text><text class="text-rad" x="-60.104076400856535" y="-60.10407640085654" filter="url(#solidBG)" role="math" aria-label="3π/4radians" aria-description="3 pi over 4 radians"><title>3π/4</title><tspan text-decoration="underline" x="-60.104076400856535" dy="-5">3π</tspan><tspan x="-60.104076400856535" dy="10">4</tspan></text><use href="#point" x="-70.71067811865474" y="-70.71067811865476"></use><text x="-84.85281374238569" y="-84.8528137423857" aria-label="(-0.707, -0.707)">(-√2/2, -√2/2)</text></g><g class="angle-group" role="group" aria-label="150 degrees" aria-description="150 degrees equals 5 pi over 6 radians, and is approximately at point (-0.866, -0.5) on the unit circle."><path d="M0,0L-86.60254037844388,-49.99999999999999"></path><text class="text-deg" x="-53.6935750346352" y="-30.999999999999996" filter="url(#solidBG)" role="math" aria-label="150 degrees">150°</text><text class="text-rad" x="-73.6121593216773" y="-42.49999999999999" filter="url(#solidBG)" role="math" aria-label="5π/6radians" aria-description="5 pi over 6 radians"><title>5π/6</title><tspan text-decoration="underline" x="-73.6121593216773" dy="-5">5π</tspan><tspan x="-73.6121593216773" dy="10">6</tspan></text><use href="#point" x="-86.60254037844388" y="-49.99999999999999"></use><text x="-103.92304845413264" y="-59.99999999999999" aria-label="(-0.866, -0.5)">(-√3/2, -1/2)</text></g><g class="angle-group cardinal" role="group" aria-label="180 degrees" aria-description="180 degrees equals 1 pi radians, and is approximately at point (-1, 0) on the unit circle."><path d="M0,0L-100,-1.2246467991473532e-14"></path><text class="text-deg" x="-62" y="-7.59281015471359e-15" filter="url(#solidBG)" role="math" aria-label="180 degrees">180°</text><text class="text-rad" x="-85" y="-1.0409497792752502e-14" filter="url(#solidBG)" role="math" aria-label="π radians" aria-description="1 pi radians">π</text><use href="#point" x="-100" y="-1.2246467991473532e-14"></use><text x="-120" y="-1.469576158976824e-14" aria-label="(-1, 0)">(-1, 0)</text></g><g class="angle-group" role="group" aria-label="210 degrees" aria-description="210 degrees equals 7 pi over 6 radians, and is approximately at point (-0.866, 0.5) on the unit circle."><path d="M0,0L-86.60254037844386,50.000000000000014"></path><text class="text-deg" x="-53.693575034635195" y="31.000000000000007" filter="url(#solidBG)" role="math" aria-label="210 degrees">210°</text><text class="text-rad" x="-73.61215932167728" y="42.50000000000001" filter="url(#solidBG)" role="math" aria-label="7π/6radians" aria-description="7 pi over 6 radians"><title>7π/6</title><tspan text-decoration="underline" x="-73.61215932167728" dy="-5">7π</tspan><tspan x="-73.61215932167728" dy="10">6</tspan></text><use href="#point" x="-86.60254037844386" y="50.000000000000014"></use><text x="-103.92304845413263" y="60.000000000000014" aria-label="(-0.866, 0.5)">(-√3/2, 1/2)</text></g><g class="angle-group" role="group" aria-label="225 degrees" aria-description="225 degrees equals 5 pi over 4 radians, and is approximately at point (-0.707, 0.707) on the unit circle."><path d="M0,0L-70.71067811865477,70.71067811865474"></path><text class="text-deg" x="-43.84062043356596" y="43.840620433565945" filter="url(#solidBG)" role="math" aria-label="225 degrees">225°</text><text class="text-rad" x="-60.104076400856556" y="60.104076400856535" filter="url(#solidBG)" role="math" aria-label="5π/4radians" aria-description="5 pi over 4 radians"><title>5π/4</title><tspan text-decoration="underline" x="-60.104076400856556" dy="-5">5π</tspan><tspan x="-60.104076400856556" dy="10">4</tspan></text><use href="#point" x="-70.71067811865477" y="70.71067811865474"></use><text x="-84.85281374238572" y="84.85281374238569" aria-label="(-0.707, 0.707)">(-√2/2, √2/2)</text></g><g class="angle-group" role="group" aria-label="240 degrees" aria-description="240 degrees equals 4 pi over 3 radians, and is approximately at point (-0.5, 0.866) on the unit circle."><path d="M0,0L-50.00000000000004,86.60254037844385"></path><text class="text-deg" x="-31.00000000000003" y="53.69357503463519" filter="url(#solidBG)" role="math" aria-label="240 degrees">240°</text><text class="text-rad" x="-42.500000000000036" y="73.61215932167727" filter="url(#solidBG)" role="math" aria-label="4π/3radians" aria-description="4 pi over 3 radians"><title>4π/3</title><tspan text-decoration="underline" x="-42.500000000000036" dy="-5">4π</tspan><tspan x="-42.500000000000036" dy="10">3</tspan></text><use href="#point" x="-50.00000000000004" y="86.60254037844385"></use><text x="-60.00000000000006" y="103.92304845413261" aria-label="(-0.5, 0.866)">(-1/2, √3/2)</text></g><g class="angle-group cardinal" role="group" aria-label="270 degrees" aria-description="270 degrees equals 3 pi over 2 radians, and is approximately at point (0, 1) on the unit circle."><path d="M0,0L-1.8369701987210297e-14,100"></path><text class="text-deg" x="-1.1389215232070385e-14" y="62" filter="url(#solidBG)" role="math" aria-label="270 degrees">270°</text><text class="text-rad" x="-1.5614246689128753e-14" y="85" filter="url(#solidBG)" role="math" aria-label="3π/2radians" aria-description="3 pi over 2 radians"><title>3π/2</title><tspan text-decoration="underline" x="-1.5614246689128753e-14" dy="-5">3π</tspan><tspan x="-1.5614246689128753e-14" dy="10">2</tspan></text><use href="#point" x="-1.8369701987210297e-14" y="100"></use><text x="-2.2043642384652355e-14" y="120" aria-label="(0, 1)">(0, 1)</text></g><g class="angle-group" role="group" aria-label="300 degrees" aria-description="300 degrees equals 5 pi over 3 radians, and is approximately at point (0.5, 0.866) on the unit circle."><path d="M0,0L50.000000000000014,86.60254037844386"></path><text class="text-deg" x="31.000000000000007" y="53.693575034635195" filter="url(#solidBG)" role="math" aria-label="300 degrees">300°</text><text class="text-rad" x="42.50000000000001" y="73.61215932167728" filter="url(#solidBG)" role="math" aria-label="5π/3radians" aria-description="5 pi over 3 radians"><title>5π/3</title><tspan text-decoration="underline" x="42.50000000000001" dy="-5">5π</tspan><tspan x="42.50000000000001" dy="10">3</tspan></text><use href="#point" x="50.000000000000014" y="86.60254037844386"></use><text x="60.000000000000014" y="103.92304845413263" aria-label="(0.5, 0.866)">(1/2, √3/2)</text></g><g class="angle-group" role="group" aria-label="315 degrees" aria-description="315 degrees equals 7 pi over 4 radians, and is approximately at point (0.707, 0.707) on the unit circle."><path d="M0,0L70.71067811865474,70.71067811865477"></path><text class="text-deg" x="43.84062043356594" y="43.84062043356596" filter="url(#solidBG)" role="math" aria-label="315 degrees">315°</text><text class="text-rad" x="60.10407640085653" y="60.104076400856556" filter="url(#solidBG)" role="math" aria-label="7π/4radians" aria-description="7 pi over 4 radians"><title>7π/4</title><tspan text-decoration="underline" x="60.10407640085653" dy="-5">7π</tspan><tspan x="60.10407640085653" dy="10">4</tspan></text><use href="#point" x="70.71067811865474" y="70.71067811865477"></use><text x="84.85281374238568" y="84.85281374238572" aria-label="(0.707, 0.707)">(√2/2, √2/2)</text></g><g class="angle-group" role="group" aria-label="330 degrees" aria-description="330 degrees equals 11 pi over 6 radians, and is approximately at point (0.866, 0.5) on the unit circle."><path d="M0,0L86.60254037844383,50.00000000000004"></path><text class="text-deg" x="53.69357503463518" y="31.00000000000003" filter="url(#solidBG)" role="math" aria-label="330 degrees">330°</text><text class="text-rad" x="73.61215932167727" y="42.500000000000036" filter="url(#solidBG)" role="math" aria-label="11π/6radians" aria-description="11 pi over 6 radians"><title>11π/6</title><tspan text-decoration="underline" x="73.61215932167727" dy="-5">11π</tspan><tspan x="73.61215932167727" dy="10">6</tspan></text><use href="#point" x="86.60254037844383" y="50.00000000000004"></use><text x="103.92304845413261" y="60.00000000000006" aria-label="(0.866, 0.5)">(√3/2, 1/2)</text></g></g>
 	<g id="custom-angles"></g>
 </svg>
 <div id="interactive-area" aria-label="Interactive area">
