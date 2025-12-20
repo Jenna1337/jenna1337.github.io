@@ -9,6 +9,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <meta name="color-scheme" content="light dark" />
 <style>
+:root {
+	--outline-size: 0.4ex;
+	--border-size: 1px;
+}
 body {
 	font-family: "Arial", "Verdana", "Calibri", sans-serif;
 }
@@ -30,7 +34,7 @@ body {
 }
 .scheduleDay > *{
 	display: table-cell;
-	border: 1px solid black;
+	border: var(--border-size) solid black;
 	padding-inline: 0.5ex;
 	line-height: 1.2;
 }
@@ -52,13 +56,19 @@ body {
 [data-isstream="false"]{/*red*/
 	background-color: color-mix(in srgb, Canvas, #C40404 25%);
 }
+/* Select all elements between [data-last="true"] and [data-next="true"] */
+[data-last="true"] ~ *:has(~[data-next="true"]) {
+	outline: var(--outline-size) solid #8889;
+	outline-offset: calc(var(--border-size) - var(--outline-size));
+	/*--outline-size-a: calc(var(--outline-size) + var(--border-size));
+	border-left: var(--outline-size-a) solid #8889;
+	border-right: var(--outline-size-a) solid #8889;*/
+}
 [data-next="true"], #nextstream>tr {
-	outline: 0.4ex solid Blue;
-	outline: 0.4ex solid #0FF9;
+	outline: var(--outline-size) solid #0FF9;
 }
 [data-last="true"], #laststream>tr {
-	outline: 0.4ex solid Orange;
-	outline: 0.4ex solid #F889;
+	outline: var(--outline-size) solid #F889;
 }
 .links {
 	img {
@@ -143,7 +153,7 @@ function findNextStreamDate(){
 	currentTimeElem.dataset.done_init = "0";
 	formatTimeLabel(currentTimeElem, new Date(currentTimeElem.getAttribute('datetime')));
 }
-window.setInterval(findNextStreamDate, 1000);
+console.log(window.setInterval(findNextStreamDate, 1000));
 const aest_offset_h = -10;
 function onload(){
 	var rawelem = document.getElementById("raw");
