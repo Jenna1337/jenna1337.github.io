@@ -315,7 +315,7 @@ function timeformatselectorchanged(){
 	window.localStorage.timeformat = timeformat;
 	
 	document.querySelectorAll(".scheduleDay[data-isstream=\"true\"] time,.scheduleDay>*:first-of-type time").forEach(elem=>{
-		formatTimeLabel(elem, new Date(elem.getAttribute('datetime')), elem===elem.parentElement.firstChild)
+		formatTimeLabel(elem, new Date(elem.getAttribute('datetime')), elem.closest('tr>*')===elem.closest('tr').firstChild)
 	})
 }
 
