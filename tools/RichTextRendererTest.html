@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+<meta charset="UTF-8" />
+<meta name="author" content="Jenna Sloan" />
+<title>RichTextRenderer.js Test</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<!--meta name="color-scheme" content="light dark" /-->
+<style>
+hr {
+	border: none;
+	border-width: 0;
+	height: 0;
+	margin: 0;
+	padding: 0;
+}
+</style>
+<script>
+</script>
+<script src="RichTextRenderer.js"></script>
+<script>
+const testStrings = [["\x1B[10\x20\x68",//set line spacing
+                "\x1B[31mThis is red text\x1B[0m and this is normal.",
+                "\x1B[1mBold Text\x1B[0m then \x1B[34mBlue Text\x1B[0m, returning to normal.",
+                "\x9B31;1mRed and bold\x1B[0m but normal here. \x1B[32mGreen text\x1B[0m.",
+                "Some text \x1B[32mGreen\x1B[0m, then some text \x1B[35Hello but this won't change.",
+                "Multifont test: [\u3046e\u56DB\uAFB8\u3044\u5B89\uD658]",
+                "Colored multifont test: [Y\x1B[31m\u3042\u3044\xE9\x1B[93m\u56DB\u5B89\x1B[96m\uAFB8\uD658\x1B[90m\uFF1FZ\x1B[0m\u4E0AW]",
+                "dark: \x1B[30mBlack\x1B[0m, \x1B[31mRed\x1B[0m, \x1B[32mGreen\x1B[0m, \x1B[33mYellow\x1B[0m, \x1B[34mBlue\x1B[0m, \x1B[35mMagenta\x1B[0m, \x1B[36mCyan\x1B[0m, \x1B[37mWhite\x1B[0m.",
+                "light: \x1B[90mBlack\x1B[0m, \x1B[91mRed\x1B[0m, \x1B[92mGreen\x1B[0m, \x1B[93mYellow\x1B[0m, \x1B[94mBlue\x1B[0m, \x1B[95mMagenta\x1B[0m, \x1B[96mCyan\x1B[0m, \x1B[97mWhite\x1B[0m.",
+                "8bit colors: \x1B[38;5;237mGrayish\x1B[38;5;10mLime\x1B[38;5;213mPink\x1B[38;5;208mOrange.",
+                "true bit colors: \x1B[38;2;255;0;255mMagenta.",
+            ],["\x1B[10\x20\x68",//set line spacing
+                "\x9B21;53mThis text has both double underlined and has an overline\x1B[0m",
+                "\x1B[21mdouble underlined\x1B[24m, \x1B[53moverlined\x1B[55m, \x1B[9mstrikethrough\x1B[29m",
+                "\x1B[63mdouble overline\x1B[55m, \x1B[9mstrikethrough\x1B[29m, \x1B[21mdouble underlined\x1B[24m",
+                "\x9B63;9;21mThis text has all double overline, strikethrough, and double underline\x1B[0m",
+                "Decorated colored multifont test: [\x1B[63;9;21mY\x1B[31m\u3042\u3044\xE9\x1B[93m\u56DB\u5B89\x1B[96m\uAFB8\uD658\x1B[90m\uFF1FZ\x1B[38;2;255;0;255m\u4E0AW\x1B[0m]",
+                "\x1B[51mFramed\x1B[54m, \x1B[52mEncircled\x1B[54m, and \x1B[51;52mboth\x1B[54m\x1B[0m",
+            ]]
+function test(in_str){
+	const rt = RenderRichText(in_str);
+	document.addEventListener('DOMContentLoaded',()=>{
+		document.body.appendChild(rt.elemTree);
+	});
+}
+function test2(in_strs){
+	test(in_strs.join('\n'));
+}
+function test3(){
+	testStrings.forEach(tst=>test2(tst));
+}
+test3();
+</script>
+</head>
+<body><span>test<br />test<hr />test</span>
+</body>
+</html>
