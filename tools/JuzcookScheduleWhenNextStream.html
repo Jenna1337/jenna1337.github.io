@@ -173,7 +173,13 @@ function onload(){
 				if(lastdate != null){
 					year = lastdate.getFullYear();
 				}
-				return new Date(year, month, day);
+				var date = new Date(year, month, day);
+				var dff= date - Date.now();
+				const msInAYear = 31556952000;
+				if(dff > (msInAYear/2)){
+					date.setYear(year - 1);
+				}
+				return date;
 			}
 			function dateFunc(row, doinc){
 				var val = row.slice(1,3).join('');
