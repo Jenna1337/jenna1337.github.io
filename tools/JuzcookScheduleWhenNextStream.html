@@ -77,6 +77,12 @@ body {
 		vertical-align: middle;
 	}
 }
+td>*:empty::after {
+	content: "Nothing scheduled";
+	color: color-mix(in srgb, currentColor, #5550 64%);
+	font-size: 85%;
+	display: inline;
+}
 </style>
 <script>
 function formatAsDurationString(ms){
