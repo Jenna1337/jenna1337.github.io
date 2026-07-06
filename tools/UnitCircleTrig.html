@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+<meta charset="UTF-8">
+<meta name="author" content="Jenna Sloan">
+<title>Trig Unit Circle</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="color-scheme" content="dark light" />
+<style>
+:root {
+	--bgcolor: white;
+	background: white;
+	color: black;
+}
+body {
+	font-family: monospace;
+	padding: 0;
+	margin: 0;
+}
+body>* {
+	float: left;
+}
+svg {
+	height: auto;
+	width: min(100%, 100vh);
+	aspect-ratio: 1 / 1;
+	/*max-height: 256px;*/
+	/*max-width: 256px;*/
+	--color: attr(data-color);
+}
+#interactive-area {
+	padding-inline: 1ex;
+	width: calc(100% - min(100%, 100vh) - 2ex);
+	display: flex;
+	flex-wrap: wrap;
+	flex-direction: row-reverse;
+	justify-content: flex-end;
+	& a>img{
+		background: white;
+		float: right;
+		max-width: 100%;
+		max-height: max(50vh, 10lh);
+	}
+	& li{
+		line-height: 1.2;
+		& :is(span,div):has(>math), >math {
+			border: 1px solid currentColor;
+			padding-inline: 1ex;
+			border-radius: 0.5lh;
+			padding-block: 0.05lh;
+			display: inline-block;
+		}
+		& math:has(mfrac) {
+			padding-block: 0.5lh;
+		}
+	}
+}
+@media (orientation: portrait) {
+	#interactive-area {
+		padding-inline: 1ex;
+		width: calc(100vw - 2ex);
+		& a>img{
+			max-height: unset !important;
+		}
+	}
+}
+#interactive-area > * {
+	margin-block: 1ex;
+}
+@media (prefers-color-scheme: dark) {
+	:root {
+		--bgcolor: black;
+		background: black;
+		color: white;
+	}
+}
+li label {
+	padding-inline: 1ex;
+}
+li label:after {
+	content: ":";
+}
+input {
+	margin: 2px;
+	width: 10ch;
+}
+input:invalid {
+	box-shadow: 0px 0px 2px red, 0px 0px 3px red, 0px 0px 4px red;
+	background-color: color-mix(in srgb, Field 95%, red 5%);
+}
+</style>
+<script>
+document.addEventListener("DOMContentLoaded",function(){
+	const customAngles = document.getElementById("custom-angles");
+	const customAngle = document.getElementById("customAngle");
+	const customRadius = document.getElementById("customRadius");
+	function redrawLines()
+	{
+		document.querySelectorAll("[data-associated-input]").forEach(a=>{
+			a.remove()
+			const targetId = a.dataset.associatedInput;
+			const targetAngle = document.getElementById(targetId).value;
+			const angleNumber = Number(targetAngle);
+			if(targetAngle!=="" && Number.isFinite(angleNumber)){
+				const newAngleElem = addLinesForAngle(targetAngle, customAngles, customRadius.value);
+				newAngleElem.dataset.associatedInput = targetId;
+			}
+		});
+	}
+	customAngle.onchange = (event)=>{
+			const targetId = "customAngle";
+			document.querySelectorAll("[data-associated-input=\"" + targetId + "\"]").forEach(a=>a.remove());
+			const targetAngle = document.getElementById(targetId).value;
+			const angleNumber = Number(targetAngle);
+			if(targetAngle!=="" && Number.isFinite(angleNumber)){
+				const newAngleElem = addLinesForAngle(targetAngle, customAngles, customRadius.value);
+				newAngleElem.dataset.associatedInput = targetId;
+			}
+	};
+	customAngle.onchange();
+	customRadius.onchange = redrawLines;
+	redrawLines();
+});
+Number.prototype.roundTo = function(p){
+	return parseFloat(this.toFixed(p));
+};
+const fontSize = 10;
+function addFractionText(svgParentTextElement, topText, bottomText, xPos = null){
+	{
+		const titleElem = document.createElementNS("http://www.w3.org/2000/svg", "title");
+		titleElem.textContent = topText + "/" + bottomText;
+		svgParentTextElement.insertBefore(titleElem, svgParentTextElement.firstChild);
+	}
+	if(bottomText === 1 || bottomText === '1' || bottomText == null || bottomText === ''){
+		svgParentTextElement.textContent = topText;
+	}
+	else{
+		const posX = xPos ?? svgParentTextElement.getAttribute("x");
+		const textElem_top = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
+		const textElem_bot = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
+		textElem_top.setAttribute("text-decoration", "underline");
+		textElem_top.setAttribute("x", posX);
+		textElem_bot.setAttribute("x", posX);
+		textElem_top.setAttribute("dy", -fontSize / 2);
+		textElem_bot.setAttribute("dy", fontSize);
+		textElem_top.textContent = topText;
+		textElem_bot.textContent = bottomText;
+		svgParentTextElement.appendChild(textElem_top);
+		svgParentTextElement.appendChild(textElem_bot);
+	}
+}
+const deg_r = 62;
+const rad_r = 85;
+const ptx_r = 120;
+const flipX = false;
+const flipY = true;
+const roundScale = Math.pow(10,2);
+function addLinesForAngle(a, target, radius){
+	const targetNode = target ?? document.getElementById("unitcircle");
+	const rad = a * Math.PI / 180;
+	const x_base = Math.cos(rad) * (flipX ? -1 : 1);
+	const y_base = Math.sin(rad) * (flipY ? -1 : 1);
+	const x_true = x_base * radius;
+	const y_true = y_base * radius;
+	const groupElem = document.createElementNS("http://www.w3.org/2000/svg", "g");
+	groupElem.classList.add("angle-group");
+	if(a%90==0){
+		groupElem.classList.add("cardinal");
+	}
+	groupElem.setAttribute("role", "group");
+	{
+		const lineElem = document.createElementNS("http://www.w3.org/2000/svg", "path");
+		const lin_x = 100 * x_base;
+		const lin_y = 100 * y_base;
+		lineElem.setAttribute("d","M0,0L"+lin_x+","+lin_y);
+		groupElem.appendChild(lineElem);
+	}
+	const textElem_Deg = document.createElementNS("http://www.w3.org/2000/svg", "text");
+	{
+		textElem_Deg.setAttribute("class", "text-deg");
+		textElem_Deg.setAttribute("x", deg_r * x_base);
+		textElem_Deg.setAttribute("y", deg_r * y_base);
+		textElem_Deg.setAttribute("filter", "url(#solidBG)");
+		textElem_Deg.setAttribute("role", "math");
+		textElem_Deg.textContent = a + "°";
+		textElem_Deg.ariaLabel = a + " degrees";
+		groupElem.appendChild(textElem_Deg);
+	}
+	const textElem_Rad = document.createElementNS("http://www.w3.org/2000/svg", "text");
+	{
+		textElem_Rad.setAttribute("class", "text-rad");
+		const textElem_Rad_x = rad_r * x_base;
+		textElem_Rad.setAttribute("x", textElem_Rad_x);
+		textElem_Rad.setAttribute("y", rad_r * y_base);
+		textElem_Rad.setAttribute("filter", "url(#solidBG)");
+		textElem_Rad.setAttribute("role", "math");
+		{
+			const frac = radiansToFrac(rad);
+			if(frac != null){
+				const pi_ch = "π";
+				const topText = (frac.numerator == 1 ? "" : frac.numerator) + pi_ch;
+				const botText = frac.denominator;
+				addFractionText(textElem_Rad, topText, botText);
+				if(frac.denominator == 1){
+					textElem_Rad.ariaLabel = textElem_Rad.textContent + " radians";
+					textElem_Rad.ariaDescription = frac.numerator + " pi radians";
+				}
+				else{
+					textElem_Rad.ariaLabel = topText + "/" + botText + "radians";
+					textElem_Rad.ariaDescription = frac.numerator + " pi over " + frac.denominator + " radians";
+				}
+			}else{
+				textElem_Rad.textContent = rad;
+			}
+		}
+		groupElem.appendChild(textElem_Rad);
+	}
+	const textElem_Point = document.createElementNS("http://www.w3.org/2000/svg", "text");
+	{
+		const pointElem = document.createElementNS("http://www.w3.org/2000/svg", "use");
+		pointElem.setAttribute("href", "#point");
+		pointElem.setAttribute("x", 100 * x_base);
+		pointElem.setAttribute("y", 100 * y_base);
+		groupElem.appendChild(pointElem);
+		
+		const textElem_Point_X = ptx_r * x_base;
+		const textElem_Point_Y = ptx_r * y_base;
+		textElem_Point.setAttribute("x", textElem_Point_X);
+		textElem_Point.setAttribute("y", textElem_Point_Y);
+		if(false){//TODO add rotate text option?
+			textElem_Point.setAttribute("transform", `rotate(${90 - a} ${textElem_Point_X} ${textElem_Point_Y})`);
+		}
+		const fracX = numberToRadicalFraction(x_true);
+		const fracY = numberToRadicalFraction(y_true);
+		console.log(fracX, fracY);
+		const xTop = fracX?.getTopString() ?? x_base.roundTo(3);
+		const xBot = fracX?.getBottomString();
+		const yTop = fracY?.getTopString() ?? y_base.roundTo(3);
+		const yBot = fracY?.getBottomString();
+		const xElem = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
+		const yElem = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
+		addFractionText(xElem, xTop, xBot, textElem_Point_X);
+		window.requestAnimationFrame(()=>{
+			addFractionText(yElem, yTop, yBot, textElem_Point_X + xElem.getBBox().width);
+		});
+		xElem.setAttribute("y", textElem_Point_Y);
+		yElem.setAttribute("y", textElem_Point_Y);
+		textElem_Point.appendChild(xElem);
+		textElem_Point.appendChild(yElem);
+		//TODO add decor to the fraction display, then remove the line below setting textElem_Point.textContent
+		
+		textElem_Point.textContent = `(${fracX?.toString() ?? x_true.roundTo(3)}, ${fracY?.toString() ?? y_true.roundTo(3)})`;
+		textElem_Point.ariaLabel = `(${x_true.roundTo(3)}, ${y_true.roundTo(3)})`;
+		groupElem.appendChild(textElem_Point);
+	}
+	groupElem.ariaLabel = textElem_Deg.ariaLabel;
+	groupElem.ariaDescription = textElem_Deg.ariaLabel + " equals " + textElem_Rad.ariaDescription + ", and is approximately at point " + textElem_Point.ariaLabel +" on the unit circle.";
+	
+	const val_sin   = document.getElementById("val-sin").textContent   = radius * Math.sin(rad);
+	const val_cos   = document.getElementById("val-cos").textContent   = radius * Math.cos(rad);
+	const val_tan   = document.getElementById("val-tan").textContent   = radius * Math.tan(rad);
+	const val_sec   = document.getElementById("val-sec").textContent   = radius * 1/val_cos;
+	const val_csc   = document.getElementById("val-csc").textContent   = radius * 1/val_sin;
+	const val_cot   = document.getElementById("val-cot").textContent   = radius * 1/val_tan;
+	const val_crd   = document.getElementById("val-crd").textContent   = 2*radius*Math.sin(rad/2);
+	const val_vsin  = document.getElementById("val-vsin").textContent  = radius-val_cos;
+	const val_cvs   = document.getElementById("val-cvs").textContent   = radius-val_sin;
+	const val_vcos  = document.getElementById("val-vcos").textContent  = val_cos+radius;
+	const val_cvc   = document.getElementById("val-cvc").textContent   = val_sin+radius;
+	const val_exsec = document.getElementById("val-exsec").textContent = val_sec-radius;
+	const val_excsc = document.getElementById("val-excsc").textContent = val_csc-radius;
+	
+	//TODO update the points for the following lines:
+	const line_sin   = document.getElementById("sin");
+	const line_cos   = document.getElementById("cos");
+	const line_sin2  = document.getElementById("sin2");
+	const line_cos2  = document.getElementById("cos2");
+	const line_tan   = document.getElementById("tan");
+	const line_sec   = document.getElementById("sec");
+	const line_csc   = document.getElementById("csc");
+	const line_cot   = document.getElementById("cot");
+	
+	const line_crd   = document.getElementById("crd");
+	const line_vsin  = document.getElementById("vsin");
+	const line_cvs   = document.getElementById("cvs");
+	const line_exsec = document.getElementById("exsec");
+	const line_excsc = document.getElementById("excsc");
+	
+	targetNode.appendChild(groupElem);
+	return groupElem;
+}
+function numberToRadicalFraction(decimal){
+	const sgn = Math.sign(decimal);
+	decimal = Math.abs(decimal);
+	class RadicalFraction {
+		constructor(sign, numerator_coeff, sqrt_value, denominator, bottom_sqrt) {
+			this.sign = sign; // e.g., 1 for sqrt(3)/2
+			this.numerator_coeff = numerator_coeff; // e.g., 1 for sqrt(3)/2
+			this.sqrt_value = sqrt_value;           // e.g., 3 for sqrt(3)/2
+			this.denominator = denominator;         // e.g., 2 for sqrt(3)/2
+			this.bottom_sqrt = bottom_sqrt;         // e.g., 2 for sqrt(3)/2
+		}
+		rawVal() {
+			return this.sign * this.numerator_coeff * Math.sqrt(this.sqrt_value) / (this.denominator * Math.sqrt(this.bottom_sqrt));
+		}
+		toString() {
+			let retVal = '';
+			if(this.sign<0){
+				retVal += '-';
+			}
+			if (this.numerator_coeff === 1 && this.sqrt_value === 1) {
+				retVal += '1';
+			}
+			if (this.numerator_coeff !== 1) {
+				retVal += this.numerator_coeff;
+			}
+			if (this.sqrt_value !== 1) {
+				retVal += `\u221A${this.sqrt_value}`;
+			}
+			if (this.denominator !== 1) {
+				retVal += `/${this.denominator}`;
+			}
+			if (this.bottom_sqrt !== 1) {
+				if (this.denominator === 1) {
+					retVal += '/'
+				}
+				retVal += `\u221A${this.bottom_sqrt}`;
+			}
+			return retVal;
+		}
+		getTopString() {
+			let retVal = '';
+			if(this.sign<0){
+				retVal += '-';
+			}
+			if (this.numerator_coeff === 1 && this.sqrt_value === 1) {
+				retVal += '1';
+			}
+			if (this.numerator_coeff !== 1) {
+				retVal += this.numerator_coeff;
+			}
+			if (this.sqrt_value !== 1) {
+				retVal += `\u221A${this.sqrt_value}`;
+			}
+			return retVal;
+		}
+		getBottomString() {
+			let retVal = '';
+			if (this.denominator !== 1) {
+				retVal += `${this.denominator}`;
+			}
+			if (this.bottom_sqrt !== 1) {
+				retVal += `\u221A${this.bottom_sqrt}`;
+			}
+			return retVal;
+		}
+	}
+
+	const tolerance = 1.0E-5; // Adjust for desired precision
+	const granularity = 10;
+	let closest = null;
+	let closestDiff = 9;
+	
+	outerLoop:
+	for (let sqrt_btm = 1; sqrt_btm <= granularity; sqrt_btm++) {
+		for (let sqrt_val = 1; sqrt_val <= granularity; sqrt_val++) {
+			for (let numerator = 1; numerator <= granularity; numerator++) {
+				for (let denominator = 1; denominator <= granularity; denominator++) { // Iterate through possible denominators
+					//console.log(frac, frac.rawVal(), frac.toString());
+					const calcVal = numerator * Math.sqrt(sqrt_val) / (denominator * Math.sqrt(sqrt_btm));
+					const calcDiff = Math.abs(decimal - calcVal);
+					if(calcDiff < closestDiff){
+						closest = new RadicalFraction(sgn, numerator, sqrt_val, denominator, sqrt_btm);
+						closestDiff = calcDiff;
+						if(closestDiff < tolerance){
+							return closest;
+						}
+					}
+				}
+			}
+		}
+	}
+	console.log(closest?.toString(), closest?.rawVal(), closestDiff);
+	return null; // Could not find a suitable fraction within tolerance
+}
+function radiansToFrac(radians){
+	const fractionOfPi = radians / Math.PI; // This will be 0.25 for π/4
+	function decimalToFraction(decimal) {
+		const tolerance = 1.0E-5; // Adjust for desired precision
+		let numerator = 1;
+		let denominator = 1;
+
+		for (denominator = 1; denominator <= 1000; denominator++) { // Iterate through possible denominators
+			numerator = Math.round(decimal * denominator);
+			if (Math.abs(decimal - (numerator / denominator)) < tolerance) {
+				return { numerator, denominator };
+			}
+		}
+		return null; // Could not find a suitable fraction within tolerance
+	}
+	return decimalToFraction(fractionOfPi);
+}
+</script>
+</head>
+<body>
+<svg id="unitcircle" viewBox="-150 -150 300 300" aria-label="Unit Circle" title="Unit Circle">
+	<style><![CDATA[
+		circle {
+			stroke: currentColor;
+		}
+		.axes {
+			stroke: #7777;
+		}
+		text {
+			fill: currentColor;
+			fill: color-mix(in srgb, currentColor 95%, red 5%);
+			text-anchor: middle;
+			dominant-baseline: middle;
+			font-size: 10px;
+		}
+		#point {
+			fill: currentColor;
+		}
+		.angle-group path {
+			stroke: red;
+			stroke-width: 0.5px;
+		}
+		.angle-group.cardinal path {
+			stroke: red;
+			stroke-width: 1px;
+		}
+		#solidBG feFlood {
+			flood-color: var(--bgcolor);
+			flood-opacity: 95%;
+		}
+		#custom-angles .angle-group path {
+			stroke: blue;
+			stroke-width: 1px;
+		}
+		#custom-angles text {
+			fill: color-mix(in srgb, currentColor 95%, blue 5%);
+			font-size: 10px;
+		}
+	]]></style>
+	<defs>
+		<!-- use these with the <use> element -->
+		<g id="point">
+			<circle cx="0" cy="0" r="2" />
+		</g>
+		<filter id="solidBG" primitiveUnits="userSpaceOnUse">
+			<feFlood result="bg"/>
+			<feMerge>
+				<feMergeNode in="bg"/>
+				<feMergeNode in="SourceGraphic"/>
+			</feMerge>
+	  </filter>
+	</defs>
+	<path class="axes" d="M-999,0H999M0,-999V999" />
+	<circle cx="0" cy="0" r="100" fill="none" stroke-width="1"/>
+	<g class="angle-group cardinal" role="group" aria-label="0 degrees" aria-description="0 degrees equals 0 pi radians, and is approximately at point (1, 0) on the unit circle."><path d="M0,0L100,0"></path><text class="text-deg" x="62" y="0" filter="url(#solidBG)" role="math" aria-label="0 degrees">0°</text></g>
+	<g id="trig-lines">
+	<line id="sin"  x1="0" y1="0" x2="0"        />
+	<line id="cos"  x1="0" y1="0"        y2="0" />
+	<line id="sin2"        y1="0"               />
+	<line id="cos2" x1="0"                      />
+	<line id="tan"                       y2="0" />
+	<line id="sec"  x1="0" y1="0"        y2="0" />
+	<line id="csc"  x1="0" y1="0" x2="0"        />
+	<line id="cot"  x1="0"                      />
+	
+	<line id="crd"                 x2="100" y2="0" />
+	<line id="vsin"          y1="0" x2="100" y2="0" />
+	<line id="cvs"   x1="0"         x2="0" y2="100" />
+	<line id="exsec" x1="100" y1="0"      y2="0" />
+	<line id="excsc" x1="0" />
+	</g>
+	<g id="custom-angles"></g>
+</svg>
+<div id="interactive-area" aria-label="Interactive area">
+<a href="https://en.wikipedia.org/wiki/File:Trig_Functions.svg" style="flex-grow: 1;">
+<img src="https://upload.wikimedia.org/wikipedia/commons/4/48/Trig_Functions.svg"/>
+</a>
+<a href="https://commons.wikimedia.org/wiki/File:Circle-trig6.svg" style="flex-grow: 0;">
+<img src="https://upload.wikimedia.org/wikipedia/commons/9/9d/Circle-trig6.svg"/>
+</a>
+<noscript>The interactive features only work when JavaScript is enabled.</noscript>
+<ul>
+<li style="display:none"><span><label for="customRadius">Custom radius (units)</label><input type="number" pattern="[+-]?d*.?d*" id="customRadius" value="1"></span></li>
+<li><span><label for="customAngle">Custom angle (degrees)</label><input type="number" pattern="[+-]?d*.?d*" id="customAngle"></span></li>
+
+<li>Sine    <math><mi>sin</mi><mo>&#x2061;</mo><mo>(</mo><mi>&theta;</mi><mo>)</mo></math>: <span id="val-sin"></span></li>
+<li>Cosine  <math><mi>cos</mi><mo>&#x2061;</mo><mo>(</mo><mi>&theta;</mi><mo>)</mo></math>: <span id="val-cos"></span></li>
+<li>Tangent <math><mi>tan</mi><mo>&#x2061;</mo><mo>(</mo><mi>&theta;</mi><mo>)</mo></math>: <span id="val-tan"></span></li>
+<li>Secant    <math><mi>1</mi><mo>/</mo><mi>cos</mi><mo>&#x2061;</mo><mo>(</mo><mi>&theta;</mi><mo>)</mo></math>: <span id="val-sec">1 / cos</span></li>
+<li>Cosecant  <math><mi>1</mi><mo>/</mo><mi>sin</mi><mo>&#x2061;</mo><mo>(</mo><mi>&theta;</mi><mo>)</mo></math>: <span id="val-csc">1 / sin</span></li>
+<li>Cotangent <math><mi>1</mi><mo>/</mo><mi>tan</mi><mo>&#x2061;</mo><mo>(</mo><mi>&theta;</mi><mo>)</mo></math>: <span id="val-cot">1 / tan</span></li>
+
+<li>Chord <math><mi>2</mi><mi>r</mi><mi>sin</mi><mo>&#x2061;</mo><mo>(</mo><mi>&theta;</mi><mo>/</mo><mi>2</mi><mo>)</mo></math>: <span id="val-crd">2rsin(theta/2)</span></li>
+<li>Versine     <math><mi>r</mi><mo>-</mo><mi>cos</mi><mo>&#x2061;</mo><mo>(</mo><mi>&theta;</mi><mo>)</mo></math>: <span id="val-vsin">r - cos</span></li>
+<li>Coversine   <math><mi>r</mi><mo>-</mo><mi>sin</mi><mo>&#x2061;</mo><mo>(</mo><mi>&theta;</mi><mo>)</mo></math>: <span id="val-cvs">r - sin</span></li>
+<li>Vercosine   <math><mi>cos</mi><mo>&#x2061;</mo><mo>(</mo><mi>&theta;</mi><mo>)</mo><mo>+</mo><mi>r</mi></math>: <span id="val-vcos">cos + r</span></li>
+<li>Covercosine <math><mi>sin</mi><mo>&#x2061;</mo><mo>(</mo><mi>&theta;</mi><mo>)</mo><mo>+</mo><mi>r</mi></math>: <span id="val-cvc">sin + r</span></li>
+<li>Exsecant    <math><mi>sec</mi><mo>&#x2061;</mo><mo>(</mo><mi>&theta;</mi><mo>)</mo><mo>-</mo><mi>r</mi></math>: <span id="val-exsec">sec - r</span></li>
+<li>Excosecant  <math><mi>csc</mi><mo>&#x2061;</mo><mo>(</mo><mi>&theta;</mi><mo>)</mo><mo>-</mo><mi>r</mi></math>: <span id="val-excsc">csc - r</span></li>
+</div>
+</body>
+</html>
