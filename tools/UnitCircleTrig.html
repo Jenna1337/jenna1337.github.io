@@ -88,8 +88,22 @@ input:invalid {
 	box-shadow: 0px 0px 2px red, 0px 0px 3px red, 0px 0px 4px red;
 	background-color: color-mix(in srgb, Field 95%, red 5%);
 }
+span[id^="val"], span[id^="val"] * {
+	border: none !important;
+}
 </style>
 <script>
+const MathMLNS = "http://www.w3.org/1998/Math/MathML";
+function makeMLTagWithText(tagName, textContent){
+	const elem = document.createElementNS(MathMLNS, tagName);
+	elem.innerHTML = textContent;
+	return elem;
+}
+function makeMLSqrtTagWithValue(val){
+	const elemsqrt = document.createElementNS(MathMLNS, "msqrt");
+	elemsqrt.appendChild(makeMLTagWithText("mn",val));
+	return elemsqrt;
+}
 document.addEventListener("DOMContentLoaded",function(){
 	const customAngles = document.getElementById("custom-angles");
 	const customAngle = document.getElementById("customAngle");
@@ -156,6 +170,7 @@ const flipX = false;
 const flipY = true;
 const roundScale = Math.pow(10,2);
 function addLinesForAngle(a, target, radius){
+	radius = Number(radius);
 	const targetNode = target ?? document.getElementById("unitcircle");
 	const rad = a * Math.PI / 180;
 	const x_base = Math.cos(rad) * (flipX ? -1 : 1);
@@ -232,7 +247,7 @@ function addLinesForAngle(a, target, radius){
 		}
 		const fracX = numberToRadicalFraction(x_true);
 		const fracY = numberToRadicalFraction(y_true);
-		console.log(fracX, fracY);
+		//console.log(fracX, fracY);
 		const xTop = fracX?.getTopString() ?? x_base.roundTo(3);
 		const xBot = fracX?.getBottomString();
 		const yTop = fracY?.getTopString() ?? y_base.roundTo(3);
@@ -256,35 +271,91 @@ function addLinesForAngle(a, target, radius){
 	groupElem.ariaLabel = textElem_Deg.ariaLabel;
 	groupElem.ariaDescription = textElem_Deg.ariaLabel + " equals " + textElem_Rad.ariaDescription + ", and is approximately at point " + textElem_Point.ariaLabel +" on the unit circle.";
 	
-	const val_sin   = document.getElementById("val-sin").textContent   = radius * Math.sin(rad);
-	const val_cos   = document.getElementById("val-cos").textContent   = radius * Math.cos(rad);
-	const val_tan   = document.getElementById("val-tan").textContent   = radius * Math.tan(rad);
-	const val_sec   = document.getElementById("val-sec").textContent   = radius * 1/val_cos;
-	const val_csc   = document.getElementById("val-csc").textContent   = radius * 1/val_sin;
-	const val_cot   = document.getElementById("val-cot").textContent   = radius * 1/val_tan;
-	const val_crd   = document.getElementById("val-crd").textContent   = 2*radius*Math.sin(rad/2);
-	const val_vsin  = document.getElementById("val-vsin").textContent  = radius-val_cos;
-	const val_cvs   = document.getElementById("val-cvs").textContent   = radius-val_sin;
-	const val_vcos  = document.getElementById("val-vcos").textContent  = val_cos+radius;
-	const val_cvc   = document.getElementById("val-cvc").textContent   = val_sin+radius;
-	const val_exsec = document.getElementById("val-exsec").textContent = val_sec-radius;
-	const val_excsc = document.getElementById("val-excsc").textContent = val_csc-radius;
+	function setVal(elemId, val)
+	{
+		const elem = document.getElementById(elemId);
+		elem.innerHTML = "";
+		const mroot = makeMLTagWithText("math","");
+		if(Number.isNaN(val)){
+			mroot.appendChild(makeMLTagWithText("mi","NaN"));
+		}
+		else
+		{
+			const frac = numberToRadicalFraction(val);
+			if(frac == null)
+			{
+				mroot.appendChild(makeMLTagWithText("mn",val));
+			}
+			else
+			{
+				mroot.append(...numberToRadicalFraction(val).getAsMathML().children);
+			}
+		}
+		const round=(n)=>parseFloat(Number(n).toPrecision(10));
+		const roundedVal = round(val);
+		if(!(mroot.firstChild.tagName=="mn" && round(mroot.firstChild.textContent)==roundedVal))
+		{
+			mroot.prepend(makeMLTagWithText("mo","&asymp;"));
+			mroot.prepend(makeMLTagWithText("mn",roundedVal));
+		}
+		elem.appendChild(mroot);
+		return val;
+	}
 	
-	//TODO update the points for the following lines:
+	const val_sin   = setVal("val-sin"  , radius * Math.sin(rad)  );
+	const val_cos   = setVal("val-cos"  , radius * Math.cos(rad)  );
+	const val_tan   = setVal("val-tan"  , radius * Math.tan(rad)  );
+	const val_sec   = setVal("val-sec"  , radius * radius * 1/val_cos      );
+	const val_csc   = setVal("val-csc"  , radius * radius * 1/val_sin      );
+	const val_cot   = setVal("val-cot"  , radius * radius * 1/val_tan      );
+	const val_crd   = setVal("val-crd"  , 2*radius*Math.sin(rad/2));
+	const val_vsin  = setVal("val-vsin" , radius-val_cos          );
+	const val_cvs   = setVal("val-cvs"  , radius-val_sin          );
+	const val_vcos  = setVal("val-vcos" , val_cos+radius          );
+	const val_cvc   = setVal("val-cvc"  , val_sin+radius          );
+	const val_exsec = setVal("val-exsec", val_sec-radius          );
+	const val_excsc = setVal("val-excsc", val_csc-radius          );
+	
+	const pt_y = -val_sin * 100 / radius;
+	const pt_x = val_cos * 100 / radius;
+	const pt_tan_x = val_sec * 100 / radius;
+	const pt_tan_y = -val_csc * 100 / radius;
 	const line_sin   = document.getElementById("sin");
+	line_sin.setAttribute("y2", pt_y);
 	const line_cos   = document.getElementById("cos");
+	line_cos.setAttribute("x2", pt_x);
 	const line_sin2  = document.getElementById("sin2");
+	line_sin2.setAttribute("x1", pt_x);
+	line_sin2.setAttribute("x2", pt_x);
+	line_sin2.setAttribute("y2", pt_y);
 	const line_cos2  = document.getElementById("cos2");
+	line_cos2.setAttribute("x2", pt_x);
+	line_cos2.setAttribute("y1", pt_y);
+	line_cos2.setAttribute("y2", pt_y);
 	const line_tan   = document.getElementById("tan");
+	line_tan.setAttribute("x1", pt_x);
+	line_tan.setAttribute("y1", pt_y);
+	line_tan.setAttribute("x2", pt_tan_x);
 	const line_sec   = document.getElementById("sec");
+	line_sec.setAttribute("x2", pt_tan_x);
 	const line_csc   = document.getElementById("csc");
+	line_csc.setAttribute("y2", pt_tan_y);
 	const line_cot   = document.getElementById("cot");
+	line_cot.setAttribute("y1", pt_tan_y);
+	line_cot.setAttribute("x2", pt_x);
+	line_cot.setAttribute("y2", pt_y);
 	
 	const line_crd   = document.getElementById("crd");
+	line_crd.setAttribute("x1", pt_x);
+	line_crd.setAttribute("y1", pt_y);
 	const line_vsin  = document.getElementById("vsin");
+	line_vsin.setAttribute("x1", pt_x);
 	const line_cvs   = document.getElementById("cvs");
+	line_cvs.setAttribute("y1", pt_y);
 	const line_exsec = document.getElementById("exsec");
+	line_exsec.setAttribute("x2", pt_tan_x);
 	const line_excsc = document.getElementById("excsc");
+	line_excsc.setAttribute("y1", pt_tan_y);
 	
 	targetNode.appendChild(groupElem);
 	return groupElem;
@@ -354,6 +425,41 @@ function numberToRadicalFraction(decimal){
 			}
 			return retVal;
 		}
+		getAsMathML() {
+			let retVal = document.createElementNS(MathMLNS, "math");
+			if(this.sign<0){
+				retVal.appendChild(makeMLTagWithText("mo","-"));
+			}
+			let isFrac = false;
+			let ftop = retVal;
+			let fbot = retVal;
+			let frac = null;
+			if (this.denominator !== 1 || this.bottom_sqrt !== 1) {
+				isFrac = true;
+				frac = makeMLTagWithText("mfrac","");
+				ftop = makeMLTagWithText("mrow","");
+				fbot = makeMLTagWithText("mrow","");
+				frac.appendChild(ftop);
+				frac.appendChild(fbot);
+				retVal.appendChild(frac);
+			}
+			if (this.numerator_coeff === 1 && this.sqrt_value === 1) {
+				ftop.appendChild(makeMLTagWithText("mn","1"));
+			}
+			if (this.numerator_coeff !== 1) {
+				ftop.appendChild(makeMLTagWithText("mn",this.numerator_coeff));
+			}
+			if (this.sqrt_value !== 1) {
+				ftop.appendChild(makeMLSqrtTagWithValue(this.sqrt_value));
+			}
+			if (this.denominator !== 1) {
+				fbot.appendChild(makeMLTagWithText("mn",this.denominator));
+			}
+			if (this.bottom_sqrt !== 1) {
+				fbot.appendChild(makeMLSqrtTagWithValue(this.bottom_sqrt));
+			}
+			return retVal;
+		}
 	}
 
 	const tolerance = 1.0E-5; // Adjust for desired precision
@@ -380,7 +486,7 @@ function numberToRadicalFraction(decimal){
 			}
 		}
 	}
-	console.log(closest?.toString(), closest?.rawVal(), closestDiff);
+	//console.log(closest?.toString(), closest?.rawVal(), closestDiff);
 	return null; // Could not find a suitable fraction within tolerance
 }
 function radiansToFrac(radians){
@@ -425,21 +531,58 @@ function radiansToFrac(radians){
 			stroke: red;
 			stroke-width: 0.5px;
 		}
-		.angle-group.cardinal path {
-			stroke: red;
-			stroke-width: 1px;
-		}
 		#solidBG feFlood {
 			flood-color: var(--bgcolor);
 			flood-opacity: 95%;
 		}
 		#custom-angles .angle-group path {
-			stroke: blue;
+			stroke: currentColor;
 			stroke-width: 1px;
 		}
 		#custom-angles text {
 			fill: color-mix(in srgb, currentColor 95%, blue 5%);
 			font-size: 10px;
+		}
+		#trig-lines
+		{
+			stroke-width: 2;
+			& .sin {
+				stroke: red;
+				stroke-width: 3;
+			}
+			& .cos {
+				stroke: blue;
+				stroke-width: 3;
+			}
+			& .tan {
+				stroke: tan;
+			}
+			& .sec {
+				stroke: darkcyan;
+			}
+			& .csc {
+				stroke: pink;
+			}
+			& .cot {
+				stroke: orange;
+			}
+			& .crd {
+				stroke: gray;
+			}
+			& .vsin {
+				stroke: green;
+			}
+			& .cvs {
+				stroke: cyan;
+			}
+			& .exsec {
+				stroke: hotpink;
+				stroke-width: 1;
+			}
+			& .excsc {
+				stroke: darkgreen;
+				stroke-width: 1;
+			}
 		}
 	]]></style>
 	<defs>
@@ -457,22 +600,21 @@ function radiansToFrac(radians){
 	</defs>
 	<path class="axes" d="M-999,0H999M0,-999V999" />
 	<circle cx="0" cy="0" r="100" fill="none" stroke-width="1"/>
-	<g class="angle-group cardinal" role="group" aria-label="0 degrees" aria-description="0 degrees equals 0 pi radians, and is approximately at point (1, 0) on the unit circle."><path d="M0,0L100,0"></path><text class="text-deg" x="62" y="0" filter="url(#solidBG)" role="math" aria-label="0 degrees">0°</text></g>
 	<g id="trig-lines">
-	<line id="sin"  x1="0" y1="0" x2="0"        />
-	<line id="cos"  x1="0" y1="0"        y2="0" />
-	<line id="sin2"        y1="0"               />
-	<line id="cos2" x1="0"                      />
-	<line id="tan"                       y2="0" />
-	<line id="sec"  x1="0" y1="0"        y2="0" />
-	<line id="csc"  x1="0" y1="0" x2="0"        />
-	<line id="cot"  x1="0"                      />
+	<line id="sin"   class="sin"   x1="1" y1="0" x2="1"        />
+	<line id="cos"   class="cos"   x1="0" y1="-1"        y2="-1" />
+	<line id="sin2"  class="sin"          y1="0"               />
+	<line id="cos2"  class="cos"   x1="0"                      />
+	<line id="tan"   class="tan"                        y2="0" />
+	<line id="sec"   class="sec"   x1="0" y1="5"        y2="5" />
+	<line id="csc"   class="csc"   x1="-5" y1="0" x2="-5"        />
+	<line id="cot"   class="cot"   x1="0"                      />
 	
-	<line id="crd"                 x2="100" y2="0" />
-	<line id="vsin"          y1="0" x2="100" y2="0" />
-	<line id="cvs"   x1="0"         x2="0" y2="100" />
-	<line id="exsec" x1="100" y1="0"      y2="0" />
-	<line id="excsc" x1="0" />
+	<line id="crd"   class="crd"                  x2="100" y2="0" />
+	<line id="vsin"  class="vsin"          y1="2" x2="100" y2="2" />
+	<line id="cvs"   class="cvs"   x1="-2"         x2="-2" y2="-100" />
+	<line id="exsec" class="exsec" x1="100" y1="0"      y2="0" />
+	<line id="excsc" class="excsc" x1="0"         x2="0" y2="-100"/>
 	</g>
 	<g id="custom-angles"></g>
 </svg>
@@ -485,8 +627,8 @@ function radiansToFrac(radians){
 </a>
 <noscript>The interactive features only work when JavaScript is enabled.</noscript>
 <ul>
-<li style="display:none"><span><label for="customRadius">Custom radius (units)</label><input type="number" pattern="[+-]?d*.?d*" id="customRadius" value="1"></span></li>
-<li><span><label for="customAngle">Custom angle (degrees)</label><input type="number" pattern="[+-]?d*.?d*" id="customAngle"></span></li>
+<li><span><label for="customRadius">Custom radius (units)</label><input type="number" pattern="[+-]?d*.?d*" id="customRadius" value="1"></span></li>
+<li><span><label for="customAngle">Custom angle (degrees)</label><input type="number" pattern="[+-]?d*.?d*" id="customAngle" value="30"></span></li>
 
 <li>Sine    <math><mi>sin</mi><mo>&#x2061;</mo><mo>(</mo><mi>&theta;</mi><mo>)</mo></math>: <span id="val-sin"></span></li>
 <li>Cosine  <math><mi>cos</mi><mo>&#x2061;</mo><mo>(</mo><mi>&theta;</mi><mo>)</mo></math>: <span id="val-cos"></span></li>
